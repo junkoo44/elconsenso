@@ -1,0 +1,148 @@
+@import "tailwindcss";
+
+@theme {
+  --color-space-dark: #1A1A2E;
+  --color-neon-purple: #7C3AED;
+  --color-neon-green: #06D6A0;
+  --color-neon-red: #FF6B6B;
+  --color-text-main: #FFFFFF;
+  --color-text-sub: #9CA3AF;
+  
+  --font-display: "Outfit", "Inter", system-ui, -apple-system, sans-serif;
+}
+
+/* 🎨 Estilo global raíz */
+:root {
+  font-family: var(--font-display);
+  background-color: var(--color-space-dark);
+  color: var(--color-text-main);
+  color-scheme: dark;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+/* 🎨 Paletas de Colores de los Temas Visuales (Redefinición Directa) */
+.theme-neon, html.theme-neon {
+  --color-space-dark: #0B0B14;     /* Negro con matriz morada */
+  --color-neon-purple: #9061F9;    /* Violeta neón brillante */
+  --color-neon-green: #00F5D4;     /* Verde menta neón */
+  --color-neon-red: #FF5A79;       /* Fucsia rojizo neón */
+}
+
+.theme-crimson, html.theme-crimson {
+  --color-space-dark: #0E0306;     /* Gris ceniza rojizo */
+  --color-neon-purple: #FF2A5F;    /* Rojo carmín neón */
+  --color-neon-green: #00E5FF;     /* Cian cibernético */
+  --color-neon-red: #FFB300;       /* Ámbar / Alerta */
+}
+
+.theme-ocean, html.theme-ocean {
+  --color-space-dark: #020B14;     /* Azul profundo de océano */
+  --color-neon-purple: #00B4D8;    /* Turquesa neón */
+  --color-neon-green: #FF7043;     /* Coral neón naranja */
+  --color-neon-red: #F2547D;       /* Rosa neón intenso */
+}
+
+.theme-forest, html.theme-forest {
+  --color-space-dark: #020B05;     /* Verde pino oscuro */
+  --color-neon-purple: #00E676;    /* Esmeralda neón */
+  --color-neon-green: #FFD54F;     /* Oro neón amarillo */
+  --color-neon-red: #FF4081;       /* Rosa fucsia */
+}
+
+.theme-arcade, html.theme-arcade {
+  --color-space-dark: #0B001A;     /* Púrpura noche espacial */
+  --color-neon-purple: #F72585;    /* Rosa chicle neón */
+  --color-neon-green: #B5FE33;     /* Verde lima neón ochentero */
+  --color-neon-red: #7209B7;       /* Violeta arcade */
+}
+
+body {
+  margin: 0;
+  background-color: var(--color-space-dark);
+  color: var(--color-text-main);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+#root {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  width: 100%;
+}
+
+/* Micro-animación global de escala para botones táctiles */
+.btn-touch {
+  transition: transform 0.1s ease, filter 0.1s ease;
+}
+.btn-touch:active {
+  transform: scale(0.95);
+  filter: brightness(0.9);
+}
+
+/* Scroll personalizado sutil y estilizado al estilo Among Us */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--color-space-dark);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-neon-purple);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #6d28d9;
+}
+
+/* 🌀 Keyframes de Animaciones Premium */
+@keyframes scaleUp {
+  from {
+    transform: scale(0.94);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes scalePulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.04);
+    filter: drop-shadow(0 0 15px rgba(255, 107, 107, 0.4));
+  }
+}
+
+@keyframes spinSlow {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Clases de utilidad para las animaciones */
+.animate-scale-up {
+  animation: scaleUp 0.22s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+.animate-scale-pulse {
+  animation: scalePulse 1s ease-in-out infinite;
+}
+
+.animate-spin-slow {
+  animation: spinSlow 12s linear infinite;
+}
+
