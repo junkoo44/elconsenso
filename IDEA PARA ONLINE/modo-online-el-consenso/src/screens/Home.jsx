@@ -15,7 +15,6 @@ import {
   Trophy, 
   X, 
   ArrowRight,
-  Info,
   Palette,
   HelpCircle
 } from 'lucide-react';
@@ -185,8 +184,6 @@ export default function Home() {
           </div>
         )}
       </div>
-
-
 
       {/* 🏆 Modal Detalles Historial / Podio */}
       {partidaSeleccionada && (

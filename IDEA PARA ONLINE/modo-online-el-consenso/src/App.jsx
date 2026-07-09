@@ -1,13 +1,10 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useGame } from './context/GameContext';
-import { useOnlineGame } from './context/OnlineGameContext';
 import Home from './screens/Home';
 import Setup from './screens/Setup';
 import Game from './screens/Game';
 import Score from './screens/Score';
 import Podium from './screens/Podium';
-
-// Vistas del modo online
 import OnlineHome from './screens/online/OnlineHome';
 import CrearSala from './screens/online/CrearSala';
 import UnirseSala from './screens/online/UnirseSala';
@@ -18,7 +15,7 @@ import PodiumOnline from './screens/online/PodiumOnline';
 
 function App() {
   const { vistaActual, navegarA, temaActual } = useGame();
-  const { setCodigoSala } = useOnlineGame();
+  const [codigoDesdeLink, setCodigoDesdeLink] = useState('');
 
   useEffect(() => {
     const root = document.documentElement;
@@ -28,16 +25,15 @@ function App() {
     root.classList.add(`theme-${temaActual}`);
   }, [temaActual]);
 
-  // Deep Link de Sala: si la URL es /sala/ABCDE, ingresar directo a la pantalla de unirse
+  // Deep link: si alguien abre /sala/ABCDE directamente, lo llevamos al form de unirse con el código precargado
   useEffect(() => {
-    const path = window.location.pathname;
-    const match = path.match(/^\/sala\/([a-zA-Z0-9]{5})$/);
+    const match = window.location.pathname.match(/^\/sala\/([A-Za-z0-9]+)$/);
     if (match) {
-      const codigo = match[1].toUpperCase();
-      setCodigoSala(codigo);
+      setCodigoDesdeLink(match[1].toUpperCase());
       navegarA('online-unirse');
     }
-  }, [navegarA, setCodigoSala]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const renderVista = () => {
     switch (vistaActual) {
@@ -51,13 +47,12 @@ function App() {
         return <Score />;
       case 'podium':
         return <Podium />;
-      // Ruteo Modo Online
       case 'online-home':
         return <OnlineHome />;
       case 'online-crear':
         return <CrearSala />;
       case 'online-unirse':
-        return <UnirseSala />;
+        return <UnirseSala codigoInicial={codigoDesdeLink} />;
       case 'online-lobby':
         return <LobbySala />;
       case 'online-ronda':
@@ -70,6 +65,9 @@ function App() {
         return <Home />;
     }
   };
+
+
+
 
   return (
     <div className={`min-h-screen flex flex-col bg-space-dark text-white overflow-x-hidden select-none theme-${temaActual} transition-all duration-500`}>
