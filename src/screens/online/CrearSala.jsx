@@ -4,18 +4,19 @@ import { useOnlineGame } from '../../context/OnlineGameContext';
 import { ArrowLeft, Loader2 } from 'lucide-react';
 
 export default function CrearSala() {
-  const { navegarA } = useGame();
+  const { navegarA, todasCategorias } = useGame();
   const { crear, cargando, error } = useOnlineGame();
   const [nombre, setNombre] = useState('');
 
   const handleCrear = async () => {
     if (!nombre.trim()) return;
     try {
+      const todosLosIds = todasCategorias.map(c => c.id);
       await crear(nombre.trim(), {
         rondas: 5,
         tiempo: 75,
         revelarGradual: true,
-        categoriasActivas: [], // se termina de configurar en el lobby
+        categoriasActivas: todosLosIds, // por defecto todas las categorías marcadas
       });
       navegarA('online-lobby');
     } catch (e) {
@@ -44,7 +45,7 @@ export default function CrearSala() {
       <input
         type="text"
         value={nombre}
-        onChange={(e) => setNombre(e.target.value)}
+        onChange={(e) => setNombre(e.target.value.replace(/\s/g, ''))}
         placeholder="¿Cómo te llamás?"
         maxLength={20}
         className="w-full bg-slate-900/60 border border-slate-805/85 rounded-xl px-4 py-3.5 text-white font-bold mb-6 outline-none focus:border-neon-purple"

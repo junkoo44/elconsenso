@@ -47,7 +47,7 @@ export default function UnirseSala() {
       <input
         type="text"
         value={codigo}
-        onChange={(e) => setCodigo(e.target.value.toUpperCase())}
+        onChange={(e) => setCodigo(e.target.value.replace(/\s/g, '').toUpperCase())}
         placeholder="ABCDE"
         maxLength={5}
         className="w-full bg-slate-900/60 border border-slate-805/85 rounded-xl px-4 py-3.5 text-white font-black text-center text-2xl tracking-[0.4em] mb-6 outline-none focus:border-neon-purple uppercase"
@@ -59,7 +59,7 @@ export default function UnirseSala() {
       <input
         type="text"
         value={nombre}
-        onChange={(e) => setNombre(e.target.value)}
+        onChange={(e) => setNombre(e.target.value.replace(/\s/g, ''))}
         placeholder="¿Cómo te llamás?"
         maxLength={20}
         className="w-full bg-slate-900/60 border border-slate-805/85 rounded-xl px-4 py-3.5 text-white font-bold mb-6 outline-none focus:border-neon-purple"

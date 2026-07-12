@@ -18,8 +18,28 @@ const firebaseConfig = {
   appId: import.meta.env.VITE_FIREBASE_APP_ID,
 };
 
-// Evita reinicializar la app si el módulo se vuelve a evaluar (HMR de Vite)
-const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
+// Solo inicializar si todas las credenciales críticas de Firebase están configuradas y son válidas
+const tieneCredenciales =
+  firebaseConfig.apiKey &&
+  firebaseConfig.apiKey !== 'undefined' &&
+  firebaseConfig.databaseURL &&
+  firebaseConfig.databaseURL !== 'undefined' &&
+  firebaseConfig.projectId &&
+  firebaseConfig.projectId !== 'undefined' &&
+  firebaseConfig.appId &&
+  firebaseConfig.appId !== 'undefined';
 
-export const db = getDatabase(app);
+const app = tieneCredenciales
+  ? (getApps().length ? getApp() : initializeApp(firebaseConfig))
+  : null;
+
+const db = app ? getDatabase(app) : null;
+
+if (db) {
+  console.log("Firebase inicializado con éxito.");
+} else {
+  console.warn("Firebase: Faltan variables de entorno. El modo online estará desactivado.");
+}
+
+export { db };
 export default app;

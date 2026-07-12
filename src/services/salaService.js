@@ -35,13 +35,13 @@ function generarCodigoSala() {
   return codigo;
 }
 
-/** Genera un id de jugador local, persistido en sessionStorage por pestaña/dispositivo */
+/** Genera un id de jugador local, persistido en localStorage por pestaña/dispositivo */
 function obtenerOCrearJugadorId(codigoSala) {
   const key = `consenso_jugador_id_${codigoSala}`;
-  let id = sessionStorage.getItem(key);
+  let id = localStorage.getItem(key);
   if (!id) {
     id = push(ref(db, 'salas')).key; // aprovechamos el generador de ids de Firebase
-    sessionStorage.setItem(key, id);
+    localStorage.setItem(key, id);
   }
   return id;
 }
@@ -53,6 +53,18 @@ export function normalizarPalabra(palabra) {
     .toLowerCase()
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, ''); // remueve diacríticos (tildes, diéresis)
+}
+
+/** Asegura que una lista de palabras recuperada de Firebase sea tratada como un array, incluso si viene como un objeto JSON con claves numéricas */
+export function normalizarPalabrasArray(palabras) {
+  if (!palabras) return [];
+  if (Array.isArray(palabras)) return palabras;
+  if (typeof palabras === 'object') {
+    return Object.keys(palabras)
+      .sort((a, b) => parseInt(a) - parseInt(b))
+      .map(key => palabras[key]);
+  }
+  return [];
 }
 
 /**
@@ -98,6 +110,31 @@ export async function crearSala(nombreHost, configInicial) {
 /**
  * Se une a una sala existente. Lanza error si no existe o si ya arrancó la partida.
  */
+/** Helper para evitar nombres duplicados, agregando números incrementales si el nombre ya existe */
+function generarNombreUnico(nombreDeseado, jugadoresExistentes = {}) {
+  const nombresOcupados = Object.values(jugadoresExistentes || {})
+    .map((j) => j.nombre.trim().toLowerCase());
+
+  const nombreFinal = nombreDeseado.trim();
+  const lowercaseFinal = nombreFinal.toLowerCase();
+
+  if (!nombresOcupados.includes(lowercaseFinal)) {
+    return nombreFinal;
+  }
+
+  let contador = 2;
+  while (true) {
+    const candidato = `${nombreFinal} ${contador}`;
+    if (!nombresOcupados.includes(candidato.toLowerCase())) {
+      return candidato;
+    }
+    contador++;
+  }
+}
+
+/**
+ * Se une a una sala existente. Lanza error si no existe o si ya arrancó la partida.
+ */
 export async function unirseSala(codigoSala, nombreJugador) {
   codigoSala = codigoSala.trim().toUpperCase();
   const salaRef = ref(db, `salas/${codigoSala}`);
@@ -112,8 +149,16 @@ export async function unirseSala(codigoSala, nombreJugador) {
   }
 
   const jugadorId = obtenerOCrearJugadorId(codigoSala);
+  const yaEstaEnSala = sala.jugadores && sala.jugadores[jugadorId];
+  let nombreDefinido = nombreJugador.trim();
+
+  // Solo forzar nombre único si el jugador es nuevo en la sala
+  if (!yaEstaEnSala) {
+    nombreDefinido = generarNombreUnico(nombreJugador, sala.jugadores);
+  }
+
   await update(ref(db, `salas/${codigoSala}/jugadores/${jugadorId}`), {
-    nombre: nombreJugador,
+    nombre: nombreDefinido,
     conectado: true,
     esHost: false,
   });
@@ -158,7 +203,7 @@ function seleccionarCategoriaAleatoria(pool, jugadas) {
 export async function iniciarPartidaOnline(codigoSala, categoriasPool, jugadoresIds) {
   const salaSnap = await get(ref(db, `salas/${codigoSala}`));
   const sala = salaSnap.val();
-  const pool = categoriasPool.filter((c) => sala.config.categoriasActivas.includes(c.id));
+  const pool = categoriasPool.filter((c) => (sala.config?.categoriasActivas || []).includes(c.id));
   if (pool.length === 0) throw new Error('No hay categorías seleccionadas para jugar.');
 
   const primeraCat = seleccionarCategoriaAleatoria(pool, []);
@@ -183,9 +228,20 @@ export async function iniciarPartidaOnline(codigoSala, categoriasPool, jugadores
   });
 }
 
-/** Un jugador manda sus 8 palabras de la ronda actual */
+/** Un jugador manda sus 8 palabras de la ronda actual, filtrando duplicados automáticamente */
 export async function enviarPalabras(codigoSala, jugadorId, palabras) {
-  await set(ref(db, `salas/${codigoSala}/palabrasEnviadas/${jugadorId}`), palabras);
+  const unicas = [];
+  const vistas = new Set();
+  (palabras || []).forEach((p) => {
+    if (!p || !p.trim()) return;
+    const norm = normalizarPalabra(p);
+    if (!vistas.has(norm)) {
+      vistas.add(norm);
+      unicas.push(p.trim());
+    }
+  });
+
+  await set(ref(db, `salas/${codigoSala}/palabrasEnviadas/${jugadorId}`), unicas);
 }
 
 /**
@@ -198,13 +254,29 @@ export async function enviarPalabras(codigoSala, jugadorId, palabras) {
  *  - puntosRonda: { jugadorId: puntosTotales }
  *  - detalle: [{ palabra, jugadoresIds: [...], puntos }]  (solo grupos con 2+ jugadores)
  */
-export function calcularCoincidencias(palabrasEnviadas) {
+/**
+ * Calcula las coincidencias entre todos los jugadores para la ronda actual.
+ * Misma fórmula que el modo local (Score.jsx): los puntos de una palabra
+ * coincidente son iguales a la cantidad de jugadores que la escribieron.
+ * Una palabra que nadie más repitió no suma puntos.
+ *
+ * Devuelve:
+ *  - puntosRonda: { jugadorId: puntosTotales }
+ *  - detalle: [{ palabra, jugadoresIds: [...], puntos }]  (solo grupos con 2+ jugadores)
+ */
+export function calcularCoincidencias(palabrasEnviadas, jugadoresIds = []) {
   const puntosRonda = {};
   const gruposPorPalabra = {}; // palabraNormalizada -> [{jugadorId, palabraOriginal}]
 
-  Object.entries(palabrasEnviadas).forEach(([jugadorId, palabras]) => {
+  // Inicializar todos los jugadores registrados con 0 puntos para asegurar robustez
+  jugadoresIds.forEach(id => {
+    puntosRonda[id] = 0;
+  });
+
+  Object.entries(palabrasEnviadas).forEach(([jugadorId, palabrasRaw]) => {
     puntosRonda[jugadorId] = 0;
-    (palabras || []).forEach((palabra) => {
+    const palabras = normalizarPalabrasArray(palabrasRaw);
+    palabras.forEach((palabra) => {
       if (!palabra || !palabra.trim()) return;
       const norm = normalizarPalabra(palabra);
       if (!gruposPorPalabra[norm]) gruposPorPalabra[norm] = [];
@@ -239,19 +311,42 @@ export function calcularCoincidencias(palabrasEnviadas) {
  * para que todos los dispositivos vean exactamente lo mismo.
  */
 export async function iniciarRevelacion(codigoSala, palabrasEnviadas, ordenRevelacion) {
-  const { puntosRonda, detalle } = calcularCoincidencias(palabrasEnviadas);
+  const { puntosRonda, detalle } = calcularCoincidencias(palabrasEnviadas, ordenRevelacion);
   await update(ref(db, `salas/${codigoSala}`), {
     estado: 'revelando',
     turnoRevelacion: 0,
+    palabraReveladaIndex: 1, // Comenzamos revelando la primera palabra
     puntosRondaActual: puntosRonda,
     detalleCoincidencias: detalle,
     ordenRevelacion,
   });
 }
 
-/** Avanza el "velo": pasa al siguiente jugador en la revelación secuencial */
+/** Avanza la palabra revelada en la pantalla de velo gradual */
+export async function avanzarPalabraRevelacion(codigoSala) {
+  const salaRef = ref(db, `salas/${codigoSala}`);
+  const snap = await get(salaRef);
+  if (snap.exists()) {
+    const sala = snap.val();
+    const sigPalabra = (sala.palabraReveladaIndex ?? 1) + 1;
+    await update(salaRef, {
+      palabraReveladaIndex: sigPalabra
+    });
+  }
+}
+
+/** Avanza el "velo": pasa al siguiente jugador en la revelación secuencial y resetea la palabra activa a la primera (1) */
 export async function avanzarTurnoRevelacion(codigoSala) {
-  await runTransaction(ref(db, `salas/${codigoSala}/turnoRevelacion`), (actual) => (actual ?? 0) + 1);
+  const salaRef = ref(db, `salas/${codigoSala}`);
+  const snap = await get(salaRef);
+  if (snap.exists()) {
+    const sala = snap.val();
+    const sigTurno = (sala.turnoRevelacion ?? 0) + 1;
+    await update(salaRef, {
+      turnoRevelacion: sigTurno,
+      palabraReveladaIndex: 1
+    });
+  }
 }
 
 /**
@@ -334,4 +429,12 @@ export function calcularRanking(mapaPuntajes) {
 /** Marca al jugador como desconectado manualmente (ej: botón "salir de la sala") */
 export async function salirDeSala(codigoSala, jugadorId) {
   await update(ref(db, `salas/${codigoSala}/jugadores/${jugadorId}`), { conectado: false });
+}
+
+/** Registra una reacción rápida del jugador con un timestamp del servidor */
+export async function enviarReaccionOnline(codigoSala, jugadorId, emoji) {
+  await update(ref(db, `salas/${codigoSala}/jugadores/${jugadorId}`), {
+    reaccion: emoji,
+    reaccionTime: serverTimestamp()
+  });
 }

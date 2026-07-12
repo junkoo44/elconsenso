@@ -1,4 +1,4 @@
-const CACHE_NAME = 'consenso-v5';
+const CACHE_NAME = 'consenso-v6';
 const ASSETS_TO_CACHE = [
   '/',
   '/index.html',
@@ -34,38 +34,34 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// Interceptar peticiones y servir desde caché
+// Interceptar peticiones y servir con estrategia Network-First
 self.addEventListener('fetch', (event) => {
-  // Ignorar peticiones que no sean HTTP/HTTPS (como las de chrome-extension:// o las de WebSockets)
+  // Ignorar peticiones que no sean HTTP/HTTPS (como chrome-extension o WebSockets)
   if (!event.request.url.startsWith(self.location.origin) && !event.request.url.startsWith('http')) {
     return;
   }
   
   event.respondWith(
-    caches.match(event.request)
-      .then((cachedResponse) => {
-        if (cachedResponse) {
-          return cachedResponse; // Retorna del caché si existe
+    fetch(event.request)
+      .then((networkResponse) => {
+        // Si es exitosa y de nuestro dominio, la guardamos/actualizamos en caché
+        if (networkResponse && networkResponse.status === 200 && networkResponse.type === 'basic') {
+          const responseToCache = networkResponse.clone();
+          caches.open(CACHE_NAME)
+            .then((cache) => {
+              cache.put(event.request, responseToCache);
+            });
         }
-        
-        return fetch(event.request)
-          .then((networkResponse) => {
-            // No cachear peticiones dinámicas que no tengan éxito o que sean de terceros sensibles
-            if (!networkResponse || networkResponse.status !== 200 || networkResponse.type !== 'basic') {
-              return networkResponse;
+        return networkResponse;
+      })
+      .catch(() => {
+        // Offline Fallback: Si falla la red, buscar en la caché
+        return caches.match(event.request)
+          .then((cachedResponse) => {
+            if (cachedResponse) {
+              return cachedResponse;
             }
-            
-            // Duplicar la respuesta para guardarla en la caché
-            const responseToCache = networkResponse.clone();
-            caches.open(CACHE_NAME)
-              .then((cache) => {
-                cache.put(event.request, responseToCache);
-              });
-              
-            return networkResponse;
-          })
-          .catch(() => {
-            // Retornar index.html si falla la navegación offline
+            // Retornar index.html de la caché si no hay internet y es navegación
             if (event.request.mode === 'navigate') {
               return caches.match('/index.html');
             }

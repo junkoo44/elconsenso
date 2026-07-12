@@ -39,6 +39,14 @@ function App() {
     }
   }, [navegarA, setCodigoSala]);
 
+  // Limpiar la URL de la barra si volvemos a una pantalla local del juego
+  useEffect(() => {
+    const esVistaOnline = vistaActual.startsWith('online-');
+    if (!esVistaOnline && window.location.pathname.includes('/sala/')) {
+      window.history.pushState({}, '', '/');
+    }
+  }, [vistaActual]);
+
   const renderVista = () => {
     switch (vistaActual) {
       case 'home':

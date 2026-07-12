@@ -113,6 +113,40 @@ export const useAudio = () => {
     }
   }, [initAudioContext]);
 
+  /**
+   * Sonido sintético "Plop" ameno de burbuja utilizando rampas de frecuencia Tone.js
+   */
+  const playPlop = useCallback(() => {
+    try {
+      initAudioContext().then(() => {
+        const osc = new Tone.Oscillator("F6", "sine").toDestination();
+        const ampEnvelope = new Tone.AmplitudeEnvelope({
+          attack: 0.001,
+          decay: 0.04,
+          sustain: 0,
+          release: 0.04
+        }).toDestination();
+        
+        osc.connect(ampEnvelope);
+        
+        const ahora = Tone.now();
+        osc.start(ahora);
+        // Rampa de frecuencia ultra corta y descendente (burbuja de agua al explotar)
+        osc.frequency.setValueAtTime(1400, ahora); 
+        osc.frequency.exponentialRampToValueAtTime(380, ahora + 0.04); 
+        
+        ampEnvelope.triggerAttackRelease("0.04", ahora);
+        
+        setTimeout(() => {
+          osc.dispose();
+          ampEnvelope.dispose();
+        }, 200);
+      });
+    } catch (e) {
+      console.warn("Error al reproducir plop:", e);
+    }
+  }, [initAudioContext]);
+
   // Forzar la precarga de voces en dispositivos móviles para evitar retrasos en la primera llamada
   if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
     window.speechSynthesis.getVoices();
@@ -178,6 +212,7 @@ export const useAudio = () => {
     playTick,
     playBuzzer,
     playFanfarria,
+    playPlop,
     speakCategory
   };
 };
