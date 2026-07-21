@@ -13,6 +13,7 @@ import {
   HelpCircle,
   AlertTriangle
 } from 'lucide-react';
+import SpeakingHeadIcon from '../components/SpeakingHeadIcon';
 
 export default function Game() {
   const { 
@@ -262,7 +263,7 @@ export default function Game() {
               onClick={toggleMuteVoz}
               title={muteVoz ? "Activar lector de voz" : "Silenciar lector de voz"}
             >
-              {muteVoz ? <MicOff className="w-4 h-4 text-neon-red" /> : <Mic className="w-4 h-4 text-neon-purple" />}
+              <SpeakingHeadIcon className={`w-4 h-4 ${muteVoz ? 'text-neon-red' : 'text-neon-purple'}`} muted={muteVoz} />
             </button>
           </div>
         </div>

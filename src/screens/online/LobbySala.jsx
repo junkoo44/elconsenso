@@ -57,7 +57,7 @@ export default function LobbySala() {
   };
 
   const jugadoresConectados = listaJugadores.filter((j) => j.conectado);
-  const puedeIniciar = jugadoresConectados.length >= 2 && (sala.config.categoriasActivas || []).length > 0;
+  const puedeIniciar = jugadoresConectados.length >= 3 && (sala.config.categoriasActivas || []).length > 0;
 
   const salirYVolver = async () => {
     await salir();
@@ -173,7 +173,7 @@ export default function LobbySala() {
                 ) : (
                   <EyeOff className="w-4 h-4 text-text-sub" />
                 )}
-                Revelar con Velo (de a uno)
+                Revelar con Velo
               </span>
               <span
                 className={`w-10 h-5.5 rounded-full p-0.5 transition-colors ${
@@ -187,6 +187,32 @@ export default function LobbySala() {
                 />
               </span>
             </button>
+
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-text-sub mb-2">
+                Velocidad de Revelación
+              </p>
+              <div className="flex gap-2">
+                {[
+                  { label: 'Normal (1x)', val: 1 },
+                  { label: 'Rápida (1.5x)', val: 1.5 },
+                  { label: 'Relámpago (2x)', val: 2 }
+                ].map(opt => (
+                  <button
+                    key={opt.val}
+                    type="button"
+                    className={`btn-touch flex-1 py-2 rounded-xl text-[10px] font-extrabold uppercase tracking-widest border transition-colors ${
+                      (sala.config.velocidadRevelacion || 1) === opt.val 
+                        ? 'bg-neon-purple text-white border-neon-purple shadow-[0_0_10px_rgba(124,58,237,0.3)]' 
+                        : 'bg-slate-900/60 text-text-sub border-slate-805/85 hover:text-white hover:border-slate-700'
+                    }`}
+                    onClick={() => actualizarConfig({ velocidadRevelacion: opt.val })}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            </div>
 
             <div>
               <p className="text-[10px] font-bold uppercase tracking-widest text-text-sub mb-2">
@@ -224,7 +250,7 @@ export default function LobbySala() {
           </button>
           {!puedeIniciar && (
             <p className="text-text-sub text-[10px] font-semibold text-center mt-2">
-              Necesitás mínimo 2 jugadores conectados y al menos 1 categoría activa.
+              Necesitás mínimo 3 jugadores conectados y al menos 1 categoría activa.
             </p>
           )}
         </>

@@ -16,6 +16,7 @@ export default function CrearSala() {
         rondas: 5,
         tiempo: 75,
         revelarGradual: true,
+        velocidadRevelacion: 1,
         categoriasActivas: todosLosIds, // por defecto todas las categorías marcadas
       });
       navegarA('online-lobby');

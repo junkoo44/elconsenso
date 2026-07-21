@@ -1,0 +1,750 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Probador de Estallidos de Burbuja — El Consenso</title>
+  
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800;900&family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+  
+  <!-- CDN de Tone.js -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+
+  <style>
+    :root {
+      --bg-dark: #090d16;
+      --bg-card: #111827;
+      --neon-purple: #8B5CF6;
+      --neon-green: #10B981;
+      --neon-blue: #3B82F6;
+      --neon-pink: #EC4899;
+      --neon-orange: #F59E0B;
+      --neon-teal: #14B8A6;
+      --text-main: #F3F4F6;
+      --text-sub: #9CA3AF;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg-dark);
+      color: var(--text-main);
+      font-family: 'Inter', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 2.5rem 1.5rem;
+      overflow-y: auto;
+    }
+
+    h1, h2, h3 {
+      font-family: 'Outfit', sans-serif;
+      font-weight: 800;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 2.5rem;
+      max-width: 600px;
+    }
+
+    header h1 {
+      font-size: 2.5rem;
+      text-transform: uppercase;
+      letter-spacing: -0.02em;
+      background: linear-gradient(135deg, #14B8A6 0%, #8B5CF6 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 0.5rem;
+    }
+
+    header p {
+      color: var(--text-sub);
+      font-size: 0.95rem;
+      line-height: 1.5;
+    }
+
+    /* Botón activar audio context */
+    .btn-activation {
+      background: linear-gradient(135deg, var(--neon-teal) 0%, #0F766E 100%);
+      border: none;
+      color: white;
+      font-family: 'Outfit', sans-serif;
+      font-weight: 900;
+      font-size: 1rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      padding: 1.1rem 2.2rem;
+      border-radius: 1rem;
+      cursor: pointer;
+      box-shadow: 0 10px 25px rgba(20, 184, 166, 0.3);
+      transition: all 0.3s ease;
+      margin-bottom: 3rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .btn-activation:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 15px 30px rgba(20, 184, 166, 0.4);
+    }
+
+    .btn-activation.active {
+      background: rgba(16, 185, 129, 0.1);
+      border: 2px solid var(--neon-green);
+      color: var(--neon-green);
+      box-shadow: none;
+      cursor: default;
+      transform: none;
+    }
+
+    .seccion-titulo {
+      width: 100%;
+      max-width: 960px;
+      margin-bottom: 1.5rem;
+      font-size: 1.2rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-sub);
+      border-left: 4px solid var(--neon-teal);
+      padding-left: 0.75rem;
+      margin-top: 2rem;
+    }
+
+    /* Grilla de Sonidos */
+    .grid-sonidos {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1.5rem;
+      width: 100%;
+      max-width: 960px;
+      margin-bottom: 2rem;
+    }
+
+    .card {
+      background-color: var(--bg-card);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: 1.5rem;
+      padding: 1.5rem;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      transition: all 0.3s ease;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 4px;
+      background: var(--neon-blue);
+    }
+
+    .card.c1::before { background: var(--neon-purple); }
+    .card.c2::before { background: var(--neon-green); }
+    .card.c3::before { background: var(--neon-blue); }
+    .card.c4::before { background: var(--neon-pink); }
+    .card.c5::before { background: var(--neon-orange); }
+    
+    .card.c6::before { background: #14B8A6; } /* Soap Pop */
+    .card.c7::before { background: #38BDF8; } /* Soft Water Burst */
+    .card.c8::before { background: #F43F5E; } /* Crispy Bubble */
+    .card.c9::before { background: #84CC16; } /* Hollow Burst */
+    
+    .card.c10::before { background: #EAB308; } /* Gota Ascendente Modular */
+    .card.c11::before { background: #D946EF; } /* Gota Ascendente Synth */
+
+    .card:hover {
+      transform: translateY(-4px);
+      border-color: rgba(255, 255, 255, 0.1);
+      box-shadow: 0 12px 20px rgba(0, 0, 0, 0.3);
+    }
+
+    .card-header h2 {
+      font-size: 1.25rem;
+      margin-bottom: 0.5rem;
+      color: white;
+    }
+
+    .card-header p {
+      color: var(--text-sub);
+      font-size: 0.82rem;
+      line-height: 1.4;
+      margin-bottom: 1.2rem;
+      min-height: 2.8rem;
+    }
+
+    .specs {
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid rgba(255, 255, 255, 0.03);
+      border-radius: 0.75rem;
+      padding: 0.75rem;
+      margin-bottom: 1.5rem;
+      font-family: monospace;
+      font-size: 0.72rem;
+      color: var(--text-sub);
+    }
+
+    .specs span {
+      display: block;
+      margin-bottom: 0.25rem;
+    }
+
+    .specs span strong {
+      color: #A78BFA;
+    }
+
+    /* Botón reproducir tono */
+    .btn-play {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 1rem;
+      color: white;
+      font-family: 'Outfit', sans-serif;
+      font-weight: 800;
+      text-transform: uppercase;
+      font-size: 0.85rem;
+      letter-spacing: 0.03em;
+      padding: 0.9rem;
+      width: 100%;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.4rem;
+      transition: all 0.2s ease;
+      z-index: 10;
+      position: relative;
+    }
+
+    .btn-play:hover {
+      background-color: white;
+      color: var(--bg-dark);
+      border-color: white;
+    }
+
+    .btn-play:active {
+      transform: scale(0.95);
+    }
+
+    /* Indicador de destello al reproducir */
+    .ping-circle {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 100px;
+      height: 100px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.08);
+      transform: translate(-50%, -50%) scale(0);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    @keyframes sound-ping {
+      0% {
+        transform: translate(-50%, -50%) scale(0);
+        opacity: 1;
+      }
+      100% {
+        transform: translate(-50%, -50%) scale(2.8);
+        opacity: 0;
+      }
+    }
+
+    .card.playing .ping-circle {
+      animation: sound-ping 0.4s cubic-bezier(0.1, 0.8, 0.3, 1) forwards;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>Probador de Estallidos de Burbuja</h1>
+    <p>Haz clic en el botón verde de abajo para activar el audio. Agregué un slider interactivo en la tarjeta de **Gota Ascendente (Modular)** para que ajustes el peak y escuches la frecuencia exacta.</p>
+  </header>
+
+  <!-- Botón de Activación de Audio Context -->
+  <button id="btn-init" class="btn-activation" onclick="iniciarAudio()">
+    🔊 Habilitar Audio del Navegador
+  </button>
+
+  <!-- SECCIÓN PROPUESTAS DEL USUARIO (GOTAS/PLOP ASCENDENTE) -->
+  <div class="seccion-titulo">💡 Nuevos Barridos Ascendentes (Tus propuestas)</div>
+  <div class="grid-sonidos">
+
+    <!-- Opción 10: Gota Ascendente (Modular) con Slider interactivo -->
+    <div class="card c10" id="card-10" style="grid-column: span 2;">
+      <div class="ping-circle"></div>
+      <div class="card-header">
+        <h2>💧 Gota Ascendente (Modular) — Con Slider de Peak</h2>
+        <p>Tu Opción 1. Un barrido de frecuencia rápido de grave a agudo. Usa este slider para regular el peak de frecuencia ascendente exacto que quieras.</p>
+        
+        <div class="specs">
+          <span><strong>Oscilador:</strong> Sine (Modular)</span>
+          <span><strong>Frecuencia Inicial:</strong> 350Hz</span>
+          
+          <span style="display: flex; align-items: center; gap: 0.75rem; margin-top: 0.5rem; margin-bottom: 0.5rem;">
+            <strong>Frecuencia Peak:</strong> 
+            <input 
+              type="range" 
+              id="peak-slider" 
+              min="950" 
+              max="1600" 
+              value="1200" 
+              step="50" 
+              oninput="document.getElementById('peak-val').innerText = this.value + 'Hz'" 
+              style="flex: 1; accent-color: var(--neon-purple); cursor: pointer;"
+            >
+            <span id="peak-val" style="color: #A78BFA; font-weight: bold; font-family: monospace; min-width: 60px; text-align: right;">1200Hz</span>
+          </span>
+          
+          <span><strong>Envelope:</strong> Decay: 30ms, Release: 15ms</span>
+        </div>
+      </div>
+      <button class="btn-play" onclick="playGotaModular(10)">
+        ▶ Probar con Frecuencia Seleccionada
+      </button>
+    </div>
+
+  </div>
+
+  <!-- SECCIÓN NUEVOS SONIDOS (EXPLOSIONES DE BURBUJA) -->
+  <div class="seccion-titulo">💥 Estallidos de Burbuja (Frecuencia Descendente)</div>
+  <div class="grid-sonidos">
+
+    <!-- Opción 6: Soap Pop (Estallido de jabón con click de ruido) -->
+    <div class="card c6" id="card-6">
+      <div class="ping-circle"></div>
+      <div class="card-header">
+        <h2>🧼 Soap Pop (Estallido)</h2>
+        <p>Simula una burbuja de jabón real que se rompe. Tiene un "click" de ruido blanco de 5ms al inicio para simular la membrana reventando.</p>
+        <div class="specs">
+          <span><strong>Oscilador:</strong> Sine + Ruido Blanco Transitorio</span>
+          <span><strong>Frecuencia:</strong> 1200Hz ↘ 300Hz en 30ms</span>
+          <span><strong>Ruido inicial:</strong> Decay de 0.004s (4ms)</span>
+        </div>
+      </div>
+      <button class="btn-play" onclick="playSoapPop(6)">
+        ▶ Escuchar estallido
+      </button>
+    </div>
+
+    <!-- Opción 7: Soft Water Burst -->
+    <div class="card c7" id="card-7">
+      <div class="ping-circle"></div>
+      <div class="card-header">
+        <h2>💧 Soft Water Burst</h2>
+        <p>Un pop puramente acuático. Tiene un barrido de frecuencia muy empinado y grave que se desvanece de golpe.</p>
+        <div class="specs">
+          <span><strong>Oscilador:</strong> Sine (Senoidal)</span>
+          <span><strong>Frecuencia:</strong> 900Hz ↘ 150Hz en 40ms</span>
+          <span><strong>Envelope:</strong> Decay ultra rápido de 35ms</span>
+        </div>
+      </div>
+      <button class="btn-play" onclick="playSoftWaterBurst(7)">
+        ▶ Escuchar estallido
+      </button>
+    </div>
+
+    <!-- Opción 8: Crispy Bubble -->
+    <div class="card c8" id="card-8">
+      <div class="ping-circle"></div>
+      <div class="card-header">
+        <h2>💥 Crispy Bubble</h2>
+        <p>Un estallido crujiente y seco. Utiliza una rampa de onda triangular y un transitorio de ruido filtrado de alta frecuencia.</p>
+        <div class="specs">
+          <span><strong>Oscilador:</strong> Triangle + Ruido Metálico</span>
+          <span><strong>Frecuencia:</strong> 1600Hz ↘ 400Hz en 35ms</span>
+          <span><strong>Carácter:</strong> Seco, nítido y cercano</span>
+        </div>
+      </div>
+      <button class="btn-play" onclick="playCrispyBubble(8)">
+        ▶ Escuchar estallido
+      </button>
+    </div>
+
+    <!-- Opción 9: Hollow Burst -->
+    <div class="card c9" id="card-9">
+      <div class="ping-circle"></div>
+      <div class="card-header">
+        <h2>🎈 Hollow Burst</h2>
+        <p>El estallido de una burbuja de aire grande. Tiene un tono inicial medio que cae de forma profunda y un release resonante.</p>
+        <div class="specs">
+          <span><strong>Oscilador:</strong> Sine (Senoidal)</span>
+          <span><strong>Frecuencia:</strong> 650Hz ↘ 80Hz en 60ms</span>
+          <span><strong>Envelope:</strong> Decay de 60ms</span>
+        </div>
+      </div>
+      <button class="btn-play" onclick="playHollowBurst(9)">
+        ▶ Escuchar estallido
+      </button>
+    </div>
+
+  </div>
+
+  <!-- SECCIÓN TONOS ANTERIORES -->
+  <div class="seccion-titulo">📋 Clásicos y Otros Tonos</div>
+  <div class="grid-sonidos">
+
+    <!-- Opción 5: Classic Bubble -->
+    <div class="card c5" id="card-5">
+      <div class="ping-circle"></div>
+      <div class="card-header">
+        <h2>🌊 Classic Bubble</h2>
+        <p>El plop tradicional de burbuja de aire emergiendo en el agua, con cuerpo más cálido y grave.</p>
+        <div class="specs">
+          <span><strong>Oscilador:</strong> Sine (Senoidal)</span>
+          <span><strong>Frecuencia:</strong> 780Hz ↘ 220Hz en 50ms</span>
+        </div>
+      </div>
+      <button class="btn-play" onclick="playClassicBubble(5)">
+        ▶ Escuchar tono
+      </button>
+    </div>
+
+    <!-- Opción 1: Bubble Pop (Actual del juego) -->
+    <div class="card c1" id="card-1">
+      <div class="ping-circle"></div>
+      <div class="card-header">
+        <h2>🫧 Bubble Pop (Actual del juego)</h2>
+        <p>El barrido de frecuencia descendente actual del juego. Simula una burbuja que explota de forma fina y con tono agudo.</p>
+        <div class="specs">
+          <span><strong>Oscilador:</strong> Sine (Senoidal)</span>
+          <span><strong>Frecuencia:</strong> 1400Hz ↘ 380Hz en 40ms</span>
+        </div>
+      </div>
+      <button class="btn-play" onclick="playBubbleActual(1)">
+        ▶ Escuchar tono
+      </button>
+    </div>
+
+    <!-- Opción 2: Acoustic Bell -->
+    <div class="card c2" id="card-2">
+      <div class="ping-circle"></div>
+      <div class="card-header">
+        <h2>🔔 Acoustic Bell</h2>
+        <p>Un tintineo limpio de campana metálica de hotel que decae de forma dulce e invita a prestar atención.</p>
+        <div class="specs">
+          <span><strong>Oscilador:</strong> Sine (Senoidal)</span>
+          <span><strong>Frecuencia:</strong> 1046.5Hz (Nota Do6)</span>
+        </div>
+      </div>
+      <button class="btn-play" onclick="playBell(2)">
+        ▶ Escuchar tono
+      </button>
+    </div>
+
+    <!-- Opción 4: Modern Tap -->
+    <div class="card c4" id="card-4">
+      <div class="ping-circle"></div>
+      <div class="card-header">
+        <h2>📱 Modern Tap</h2>
+        <p>Un click táctil extremadamente corto y minimalista, ideal para dar sensación de botones físicos modernos.</p>
+        <div class="specs">
+          <span><strong>Oscilador:</strong> Sine (Senoidal)</span>
+          <span><strong>Frecuencia:</strong> 880Hz (Nota La5)</span>
+        </div>
+      </div>
+      <button class="btn-play" onclick="playModernTap(4)">
+        ▶ Escuchar tono
+      </button>
+    </div>
+
+  </div>
+
+  <script>
+    let audioIniciado = false;
+
+    async function iniciarAudio() {
+      if (Tone.context.state !== 'running') {
+        await Tone.start();
+        audioIniciado = true;
+        
+        const btn = document.getElementById('btn-init');
+        btn.innerText = '✅ Audio Habilitado';
+        btn.classList.add('active');
+      }
+    }
+
+    function dispararDestello(idCard) {
+      const card = document.getElementById(`card-${idCard}`);
+      card.classList.remove('playing');
+      void card.offsetWidth; // truco para reiniciar animación CSS
+      card.classList.add('playing');
+    }
+
+    // --- 10. Gota Ascendente (Modular - Tu Opción 1 con Slider) ---
+    function playGotaModular(idCard) {
+      if (!audioIniciado) { alert("Habilitá primero el audio con el botón verde de arriba."); return; }
+      dispararDestello(idCard);
+
+      const peakFreq = parseInt(document.getElementById('peak-slider').value);
+
+      const osc = new Tone.Oscillator(350, "sine");
+      const ampEnvelope = new Tone.AmplitudeEnvelope({
+        attack: 0.001,
+        decay: 0.03,
+        sustain: 0,
+        release: 0.015
+      }).toDestination();
+
+      osc.connect(ampEnvelope);
+      const now = Tone.now();
+      
+      osc.start(now);
+      osc.frequency.setValueAtTime(350, now);
+      osc.frequency.exponentialRampToValueAtTime(peakFreq, now + 0.025);
+      ampEnvelope.triggerAttackRelease(0.03, now);
+      osc.stop(now + 0.05);
+
+      setTimeout(() => {
+        osc.dispose();
+        ampEnvelope.dispose();
+      }, 150);
+    }
+
+    // --- 6. Soap Pop (Estallido con click de ruido) ---
+    function playSoapPop(idCard) {
+      if (!audioIniciado) { alert("Habilitá primero el audio con el botón verde de arriba."); return; }
+      dispararDestello(idCard);
+
+      const ahora = Tone.now();
+
+      // 1. Generador de ruido ultra corto para el transitorio ("snap" del estallido)
+      const noise = new Tone.NoiseSynth({
+        noise: { type: 'pink' },
+        envelope: { attack: 0.001, decay: 0.004, sustain: 0 }
+      }).toDestination();
+      noise.volume.value = -6;
+
+      // 2. Oscilador para el cuerpo de la burbuja
+      const osc = new Tone.Oscillator("D6", "sine").toDestination();
+      const ampEnvelope = new Tone.AmplitudeEnvelope({
+        attack: 0.001,
+        decay: 0.03,
+        sustain: 0,
+        release: 0.03
+      }).toDestination();
+
+      osc.connect(ampEnvelope);
+
+      // Gatillar ambos
+      noise.triggerAttack(ahora);
+      osc.start(ahora);
+      osc.frequency.setValueAtTime(1200, ahora);
+      osc.frequency.exponentialRampToValueAtTime(300, ahora + 0.03);
+      ampEnvelope.triggerAttackRelease("0.03", ahora);
+
+      setTimeout(() => {
+        osc.dispose();
+        ampEnvelope.dispose();
+        noise.dispose();
+      }, 250);
+    }
+
+    // --- 7. Soft Water Burst (Pop acuático muy grave) ---
+    function playSoftWaterBurst(idCard) {
+      if (!audioIniciado) { alert("Habilitá primero el audio con el botón verde de arriba."); return; }
+      dispararDestello(idCard);
+
+      const osc = new Tone.Oscillator("B4", "sine").toDestination();
+      const ampEnvelope = new Tone.AmplitudeEnvelope({
+        attack: 0.001,
+        decay: 0.035,
+        sustain: 0,
+        release: 0.035
+      }).toDestination();
+
+      osc.connect(ampEnvelope);
+      const ahora = Tone.now();
+      osc.start(ahora);
+      osc.frequency.setValueAtTime(900, ahora);
+      osc.frequency.exponentialRampToValueAtTime(150, ahora + 0.04);
+      ampEnvelope.triggerAttackRelease("0.035", ahora);
+
+      setTimeout(() => {
+        osc.dispose();
+        ampEnvelope.dispose();
+      }, 200);
+    }
+
+    // --- 8. Crispy Bubble (Estallido seco con onda triangular) ---
+    function playCrispyBubble(idCard) {
+      if (!audioIniciado) { alert("Habilitá primero el audio con el botón verde de arriba."); return; }
+      dispararDestello(idCard);
+
+      const ahora = Tone.now();
+
+      // Click metálico sutil
+      const noise = new Tone.NoiseSynth({
+        noise: { type: 'white' },
+        envelope: { attack: 0.001, decay: 0.002, sustain: 0 }
+      }).toDestination();
+      noise.volume.value = -12;
+
+      const osc = new Tone.Oscillator("G5", "triangle").toDestination();
+      const ampEnvelope = new Tone.AmplitudeEnvelope({
+        attack: 0.0005,
+        decay: 0.04,
+        sustain: 0,
+        release: 0.04
+      }).toDestination();
+      osc.volume.value = -3; // Bajar un poco la onda triangular
+
+      osc.connect(ampEnvelope);
+      noise.triggerAttack(ahora);
+      osc.start(ahora);
+      osc.frequency.setValueAtTime(1600, ahora);
+      osc.frequency.exponentialRampToValueAtTime(400, ahora + 0.035);
+      ampEnvelope.triggerAttackRelease("0.04", ahora);
+
+      setTimeout(() => {
+        osc.dispose();
+        ampEnvelope.dispose();
+        noise.dispose();
+      }, 250);
+    }
+
+    // --- 9. Hollow Burst (Burbuja grande hueca) ---
+    function playHollowBurst(idCard) {
+      if (!audioIniciado) { alert("Habilitá primero el audio con el botón verde de arriba."); return; }
+      dispararDestello(idCard);
+
+      const osc = new Tone.Oscillator("E5", "sine").toDestination();
+      const ampEnvelope = new Tone.AmplitudeEnvelope({
+        attack: 0.001,
+        decay: 0.06,
+        sustain: 0,
+        release: 0.06
+      }).toDestination();
+
+      osc.connect(ampEnvelope);
+      const ahora = Tone.now();
+      osc.start(ahora);
+      osc.frequency.setValueAtTime(650, ahora);
+      osc.frequency.exponentialRampToValueAtTime(80, ahora + 0.06);
+      ampEnvelope.triggerAttackRelease("0.06", ahora);
+
+      setTimeout(() => {
+        osc.dispose();
+        ampEnvelope.dispose();
+      }, 300);
+    }
+
+    // --- 1. Bubble Pop (Actual) ---
+    function playBubbleActual(idCard) {
+      if (!audioIniciado) { alert("Habilitá primero el audio con el botón verde de arriba."); return; }
+      dispararDestello(idCard);
+
+      const osc = new Tone.Oscillator("F6", "sine").toDestination();
+      const ampEnvelope = new Tone.AmplitudeEnvelope({
+        attack: 0.001,
+        decay: 0.04,
+        sustain: 0,
+        release: 0.04
+      }).toDestination();
+      
+      osc.connect(ampEnvelope);
+      const ahora = Tone.now();
+      osc.start(ahora);
+      osc.frequency.setValueAtTime(1400, ahora); 
+      osc.frequency.exponentialRampToValueAtTime(380, ahora + 0.04); 
+      ampEnvelope.triggerAttackRelease("0.04", ahora);
+
+      setTimeout(() => {
+        osc.dispose();
+        ampEnvelope.dispose();
+      }, 200);
+    }
+
+    // --- 2. Acoustic Bell ---
+    function playBell(idCard) {
+      if (!audioIniciado) { alert("Habilitá primero el audio con el botón verde de arriba."); return; }
+      dispararDestello(idCard);
+
+      const osc = new Tone.Oscillator("C6", "sine").toDestination();
+      const ampEnvelope = new Tone.AmplitudeEnvelope({
+        attack: 0.001,
+        decay: 0.25,
+        sustain: 0,
+        release: 0.25
+      }).toDestination();
+      
+      osc.connect(ampEnvelope);
+      const ahora = Tone.now();
+      osc.start(ahora);
+      ampEnvelope.triggerAttackRelease("0.25", ahora);
+
+      setTimeout(() => {
+        osc.dispose();
+        ampEnvelope.dispose();
+      }, 600);
+    }
+
+    // --- 4. Modern Tap ---
+    function playModernTap(idCard) {
+      if (!audioIniciado) { alert("Habilitá primero el audio con el botón verde de arriba."); return; }
+      dispararDestello(idCard);
+
+      const osc = new Tone.Oscillator("A5", "sine").toDestination();
+      const ampEnvelope = new Tone.AmplitudeEnvelope({
+        attack: 0.001,
+        decay: 0.015,
+        sustain: 0,
+        release: 0.015
+      }).toDestination();
+      
+      osc.connect(ampEnvelope);
+      const ahora = Tone.now();
+      osc.start(ahora);
+      ampEnvelope.triggerAttackRelease("0.015", ahora);
+
+      setTimeout(() => {
+        osc.dispose();
+        ampEnvelope.dispose();
+      }, 150);
+    }
+
+    // --- 5. Classic Bubble ---
+    function playClassicBubble(idCard) {
+      if (!audioIniciado) { alert("Habilitá primero el audio con el botón verde de arriba."); return; }
+      dispararDestello(idCard);
+
+      const osc = new Tone.Oscillator("G5", "sine").toDestination();
+      const ampEnvelope = new Tone.AmplitudeEnvelope({
+        attack: 0.002,
+        decay: 0.05,
+        sustain: 0,
+        release: 0.05
+      }).toDestination();
+      
+      osc.connect(ampEnvelope);
+      const ahora = Tone.now();
+      osc.start(ahora);
+      osc.frequency.setValueAtTime(780, checked => {}); // dummy fallback
+      osc.frequency.setValueAtTime(780, ahora); 
+      osc.frequency.exponentialRampToValueAtTime(220, ahora + 0.05); 
+      ampEnvelope.triggerAttackRelease("0.05", ahora);
+
+      setTimeout(() => {
+        osc.dispose();
+        ampEnvelope.dispose();
+      }, 250);
+    }
+  </script>
+</body>
+</html>

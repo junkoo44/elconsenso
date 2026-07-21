@@ -2,7 +2,6 @@ import React, { useEffect, useRef } from 'react';
 import { useGame } from '../../context/GameContext';
 import { useOnlineGame } from '../../context/OnlineGameContext';
 import { useAudio } from '../../hooks/useAudio';
-import { getHistory, saveMatchToHistory } from '../../services/categories';
 import { Crown, Home, Trophy, Sparkles } from 'lucide-react';
 
 export default function PodiumOnline() {
@@ -92,32 +91,6 @@ export default function PodiumOnline() {
 
   const ganador = tablaFinal[0];
 
-  // --- 3. Guardar en el historial de todos los jugadores conectados ---
-  useEffect(() => {
-    if (!sala || !ganador || !codigoSala) return;
-
-    try {
-      const historial = getHistory();
-      const clavePartidaUnica = `online_${codigoSala}`;
-      const yaExiste = historial.some((partida) => partida.claveUnica === clavePartidaUnica);
-
-      if (!yaExiste) {
-        const rankingFinal = tablaFinal.map((j) => ({ nombre: j.nombre, puntos: j.puntos }));
-        const registroPartida = {
-          fecha: new Date().toLocaleDateString(),
-          hora: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-          ganador: ganador.nombre,
-          tablaFinal: rankingFinal,
-          modo: 'Online',
-          claveUnica: clavePartidaUnica,
-        };
-        saveMatchToHistory(registroPartida);
-        console.log("Partida online guardada en el historial de este dispositivo.");
-      }
-    } catch (e) {
-      console.warn("Fallo al guardar la partida online en el historial:", e);
-    }
-  }, [sala, ganador, tablaFinal, codigoSala]);
 
   if (!sala) return null;
 

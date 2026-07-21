@@ -17,7 +17,7 @@ import RevelacionOnline from './screens/online/RevelacionOnline';
 import PodiumOnline from './screens/online/PodiumOnline';
 
 function App() {
-  const { vistaActual, navegarA, temaActual } = useGame();
+  const { vistaActual, navegarA, temaActual, modalSalirOpen, setModalSalirOpen } = useGame();
   const { setCodigoSala } = useOnlineGame();
 
   useEffect(() => {
@@ -28,24 +28,25 @@ function App() {
     root.classList.add(`theme-${temaActual}`);
   }, [temaActual]);
 
-  // Deep Link de Sala: si la URL es /sala/ABCDE, ingresar directo a la pantalla de unirse
+  // Detector de links (Deep Link). Usamos un useRef para garantizar que SOLO corra al abrir la app.
+  const deepLinkRevisado = React.useRef(false);
+
   useEffect(() => {
+    if (deepLinkRevisado.current) return;
+    
+    // Lo cerramos permanentemente en la primera carga de la App
+    deepLinkRevisado.current = true;
+    
     const path = window.location.pathname;
     const match = path.match(/^\/sala\/([a-zA-Z0-9]{5})$/);
     if (match) {
       const codigo = match[1].toUpperCase();
       setCodigoSala(codigo);
+      // Limpiamos la URL inmediatamente para evitar bucles si el usuario navega hacia atrás
+      window.history.replaceState({ base: true }, '', '/');
       navegarA('online-unirse');
     }
   }, [navegarA, setCodigoSala]);
-
-  // Limpiar la URL de la barra si volvemos a una pantalla local del juego
-  useEffect(() => {
-    const esVistaOnline = vistaActual.startsWith('online-');
-    if (!esVistaOnline && window.location.pathname.includes('/sala/')) {
-      window.history.pushState({}, '', '/');
-    }
-  }, [vistaActual]);
 
   const renderVista = () => {
     switch (vistaActual) {
@@ -82,6 +83,40 @@ function App() {
   return (
     <div className={`min-h-screen flex flex-col bg-space-dark text-white overflow-x-hidden select-none theme-${temaActual} transition-all duration-500`}>
       {renderVista()}
+
+      {/* Cartel Anti-Salidas Accidentales */}
+      {modalSalirOpen && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-scale-up">
+          <div className="bg-space-dark border-2 border-neon-red rounded-2xl max-w-xs w-full p-6 shadow-2xl text-center">
+            <h3 className="text-sm font-black tracking-widest uppercase text-neon-red mb-3 font-display">
+              ¿Abandonar Partida?
+            </h3>
+            <p className="text-text-sub text-xs mb-6 font-bold leading-relaxed">
+              Estás en medio de un juego. Si sales ahora, perderás todo el progreso de esta partida.
+            </p>
+            <div className="flex gap-3">
+              <button 
+                type="button"
+                onClick={() => setModalSalirOpen(false)}
+                className="btn-touch flex-1 py-3.5 bg-slate-800 hover:bg-slate-700 text-white font-extrabold rounded-xl text-[10px] uppercase tracking-widest"
+              >
+                Quedarme
+              </button>
+              <button 
+                type="button"
+                onClick={() => {
+                  setModalSalirOpen(false);
+                  const esOnline = vistaActual.startsWith('online-');
+                  navegarA(esOnline ? 'online-home' : 'home');
+                }}
+                className="btn-touch flex-1 py-3.5 bg-neon-red hover:bg-red-500 text-white font-extrabold rounded-xl text-[10px] uppercase tracking-widest"
+              >
+                Sí, Salir
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

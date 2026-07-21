@@ -14,6 +14,7 @@ import {
   FileSpreadsheet,
   Mic
 } from 'lucide-react';
+import SpeakingHeadIcon from '../components/SpeakingHeadIcon';
 
 export default function Score() {
   const {
@@ -139,7 +140,7 @@ export default function Score() {
 
       {/* 🗣️ Lector de Ronda */}
       <div className="bg-neon-purple/10 border border-neon-purple/35 rounded-2xl py-3 px-4 flex items-center justify-center gap-2 text-xs font-bold text-white shadow-md shadow-neon-purple/5">
-        <Mic className="w-4 h-4 text-neon-purple animate-pulse shrink-0" />
+        <SpeakingHeadIcon className="w-4 h-4 text-neon-purple animate-pulse shrink-0" />
         <span>Comienza leyendo: <span className="text-neon-purple font-black">{lectorRonda}</span></span>
       </div>
 

@@ -150,6 +150,15 @@ export async function unirseSala(codigoSala, nombreJugador) {
 
   const jugadorId = obtenerOCrearJugadorId(codigoSala);
   const yaEstaEnSala = sala.jugadores && sala.jugadores[jugadorId];
+
+  // Validar límite máximo de 10 jugadores (permitir reconexión si ya estaba registrado)
+  if (!yaEstaEnSala) {
+    const cantidadJugadores = sala.jugadores ? Object.keys(sala.jugadores).length : 0;
+    if (cantidadJugadores >= 10) {
+      throw new Error('La sala está llena. El máximo de jugadores permitido es 10.');
+    }
+  }
+
   let nombreDefinido = nombreJugador.trim();
 
   // Solo forzar nombre único si el jugador es nuevo en la sala

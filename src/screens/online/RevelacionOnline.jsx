@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useGame } from '../../context/GameContext';
 import { useOnlineGame } from '../../context/OnlineGameContext';
+import { normalizarPalabra } from '../../services/salaService';
 import { useAudio } from '../../hooks/useAudio';
 import { Sparkles, ArrowRight, Trophy } from 'lucide-react';
 
@@ -23,6 +24,7 @@ export default function RevelacionOnline() {
   }, [sala?.estado, navegarA]);
 
   const revelarGradual = sala?.config?.revelarGradual;
+  const velocidad = sala?.config?.velocidadRevelacion || 1;
   const orden = sala?.ordenRevelacion || [];
   const turno = sala?.turnoRevelacion || 0;
   const yaTerminoRevelacion = !revelarGradual || turno >= orden.length;
@@ -67,7 +69,7 @@ export default function RevelacionOnline() {
   // Índices de palabras de esta tarjeta que coinciden Y ya fueron leídas anteriormente
   const indicesPreLeidos = palabras
     .map((p, idx) => {
-      const coincide = coincidencias.some(c => c.palabra.toLowerCase() === p.toLowerCase());
+      const coincide = coincidencias.some(c => normalizarPalabra(c.palabra) === normalizarPalabra(p));
       const yaLeida = coincide && palabrasLeidasAnteriores.has(p.toLowerCase());
       return yaLeida ? idx : -1;
     })
@@ -75,8 +77,14 @@ export default function RevelacionOnline() {
 
   // --- Estados de ritmo: FaseActual ('intro', 'pausaInicial', 'fast', 'pausaIntermedia', 'lenta') ---
   const [faseActual, setFaseActual] = useState('intro');
+  const faseActualRef = useRef('intro');
   const [fastReveladasCount, setFastReveladasCount] = useState(0);
   const ultimaPalabraLeidaIndexRef = useRef(0);
+
+  const cambiarFase = (nuevaFase) => {
+    faseActualRef.current = nuevaFase;
+    setFaseActual(nuevaFase);
+  };
 
   const palabrasRef = useRef(palabras);
   const palabrasLeidasAnterioresRef = useRef(palabrasLeidasAnteriores);
@@ -92,11 +100,11 @@ export default function RevelacionOnline() {
   // Reiniciar flujo y control de voz al cambiar de jugador
   useEffect(() => {
     if (!yaTerminoRevelacion && revelarGradual) {
-      setFaseActual('intro');
+      cambiarFase('intro');
       setFastReveladasCount(0);
       ultimaPalabraLeidaIndexRef.current = 0;
     } else {
-      setFaseActual('lenta');
+      cambiarFase('lenta');
       ultimaPalabraLeidaIndexRef.current = 0;
     }
   }, [turno, jugadorIdActual]);
@@ -107,20 +115,20 @@ export default function RevelacionOnline() {
 
     if (faseActual === 'intro') {
       const timer = setTimeout(() => {
-        setFaseActual('pausaInicial');
-      }, 1000); // 1a: Mostrar nombre durante 1.0 segundo
+        cambiarFase('pausaInicial');
+      }, 1000 / velocidad); // 1a: Mostrar nombre
       return () => clearTimeout(timer);
     }
 
     if (faseActual === 'pausaInicial') {
       const timer = setTimeout(() => {
-        // 1c: Tras mostrar el tablero tapado por 1s, si hay repetidas, vamos a fast; si no, a la transición.
+        // 1c: Tras mostrar el tablero tapado, si hay repetidas, vamos a fast; si no, a la transición.
         if (indicesPreLeidos.length > 0) {
-          setFaseActual('fast');
+          cambiarFase('fast');
         } else {
-          setFaseActual('pausaIntermedia');
+          cambiarFase('pausaIntermedia');
         }
-      }, 1000); // 1c: Espera 1.0 segundo antes de continuar
+      }, 1000 / velocidad); // 1c: Espera
       return () => clearTimeout(timer);
     }
 
@@ -133,41 +141,41 @@ export default function RevelacionOnline() {
             clearInterval(timer);
             // Pasar a la pausa de transición post-repaso
             setTimeout(() => {
-              setFaseActual('pausaIntermedia');
-            }, 400); // delay del último plop
+              cambiarFase('pausaIntermedia');
+            }, 400 / velocidad); // delay del último plop
             return indicesPreLeidos.length;
           }
           return next;
         });
-      }, 400); // 2: 0.4 segundos de separación entre sonidos de repaso
+      }, 400 / velocidad); // 2: separación entre sonidos de repaso
       return () => clearInterval(timer);
     }
 
     if (faseActual === 'pausaIntermedia') {
       const timer = setTimeout(() => {
-        setFaseActual('lenta');
-      }, 1000); // 3: Silencio de transición de 1.0 segundo al terminar repaso
+        cambiarFase('lenta');
+      }, 1000 / velocidad); // 3: Silencio de transición al terminar repaso
       return () => clearTimeout(timer);
     }
-  }, [faseActual, indicesPreLeidos.length, yaTerminoRevelacion, revelarGradual, playPlop]);
+  }, [faseActual, indicesPreLeidos.length, yaTerminoRevelacion, revelarGradual, playPlop, velocidad]);
 
   // --- 2. Paso automático lento entre palabras (Solo Host y si estamos en fase lenta) ---
   useEffect(() => {
-    if (!revelarGradual || yaTerminoRevelacion || !soyHost || !jugadorIdActual || faseActual !== 'lenta') return;
+    if (!revelarGradual || yaTerminoRevelacion || !soyHost || !jugadorIdActual || faseActualRef.current !== 'lenta') return;
 
     const idx = sala?.palabraReveladaIndex ?? 1;
     const currentPalabras = palabrasRef.current;
     
     if (idx <= currentPalabras.length) {
       const palabraActual = currentPalabras[idx - 1];
-      let delay = 2500; // 2.5 segundos normal para leer palabras nuevas
+      let delay = 2500 / velocidad; // 2.5 segundos normal para leer palabras nuevas
 
       if (palabraActual) {
         const currentCoincidencias = coincidenciasRef.current;
         const currentLeidas = palabrasLeidasAnterioresRef.current;
         
         const coincide = currentCoincidencias.some(
-          (c) => c.palabra.toLowerCase() === palabraActual.toLowerCase()
+          (c) => normalizarPalabra(c.palabra) === normalizarPalabra(palabraActual)
         );
         const yaLeidaAnteriormente = coincide && currentLeidas.has(palabraActual.toLowerCase());
         
@@ -186,7 +194,7 @@ export default function RevelacionOnline() {
 
   // --- 3. Lectura por voz reactiva (Solo lee palabras nuevas y evita duplicados al inicio) ---
   useEffect(() => {
-    if (!revelarGradual || yaTerminoRevelacion || !soyHost || !jugadorIdActual || faseActual !== 'lenta') return;
+    if (!revelarGradual || yaTerminoRevelacion || !soyHost || !jugadorIdActual || faseActualRef.current !== 'lenta') return;
 
     const idx = sala?.palabraReveladaIndex ?? 1;
     
@@ -201,7 +209,7 @@ export default function RevelacionOnline() {
         const currentLeidas = palabrasLeidasAnterioresRef.current;
         
         const coincide = currentCoincidencias.some(
-          (c) => c.palabra.toLowerCase() === palabraActual.toLowerCase()
+          (c) => normalizarPalabra(c.palabra) === normalizarPalabra(palabraActual)
         );
         const yaLeidaAnteriormente = coincide && currentLeidas.has(palabraActual.toLowerCase());
 
@@ -326,7 +334,7 @@ export default function RevelacionOnline() {
       const indicesReveladosEnFast = indicesPreLeidos.slice(0, fastReveladasCount);
       puntosJugadorParcial = palabras.reduce((total, palabra, idx) => {
         if (indicesReveladosEnFast.includes(idx)) {
-          const match = coincidencias.find(c => c.palabra.toLowerCase() === palabra.toLowerCase());
+          const match = coincidencias.find(c => normalizarPalabra(c.palabra) === normalizarPalabra(palabra));
           return total + (match ? match.puntos : 0);
         }
         return total;
@@ -334,7 +342,7 @@ export default function RevelacionOnline() {
     } else {
       // pausaIntermedia o lenta
       puntosJugadorParcial = palabras.reduce((total, palabra, idx) => {
-        const match = coincidencias.find(c => c.palabra.toLowerCase() === palabra.toLowerCase());
+        const match = coincidencias.find(c => normalizarPalabra(c.palabra) === normalizarPalabra(palabra));
         const esPreLeida = match && palabrasLeidasAnteriores.has(palabra.toLowerCase());
         const esRecorridaLenta = idx < indexRevelado;
         if (match && (esPreLeida || esRecorridaLenta)) {
@@ -376,7 +384,7 @@ export default function RevelacionOnline() {
           <div className="grid grid-cols-2 gap-2.5 mb-6">
             {palabras.map((palabra, idx) => {
               const coincide = coincidencias.some(
-                (c) => c.palabra.toLowerCase() === palabra.toLowerCase()
+                (c) => normalizarPalabra(c.palabra) === normalizarPalabra(palabra)
               );
               const yaLeidaAnteriormente = coincide && palabrasLeidasAnteriores.has(palabra.toLowerCase());
 
@@ -393,7 +401,7 @@ export default function RevelacionOnline() {
 
               // Obtener jugadores coincidentes
               const matchDetalle = coincidencias.find(
-                (c) => c.palabra.toLowerCase() === palabra.toLowerCase()
+                (c) => normalizarPalabra(c.palabra) === normalizarPalabra(palabra)
               );
               const idsCoincidentes = matchDetalle 
                 ? matchDetalle.jugadoresIds.filter(id => id !== jugadorIdActual) 
@@ -477,9 +485,9 @@ export default function RevelacionOnline() {
                 <button
                   type="button"
                   className="btn-touch w-full py-4.5 px-6 bg-neon-purple hover:bg-violet-750 text-white font-extrabold rounded-2xl border-b-4 border-violet-900 tracking-widest text-sm uppercase flex items-center justify-center gap-2 cursor-pointer"
-                  onClick={avanzarJugador}
+                  onClick={turno === orden.length - 1 && sala.config.rondas !== 'infinito' && sala.rondaActual >= sala.config.rondas ? continuarASiguienteRonda : avanzarJugador}
                 >
-                  <Sparkles className="w-4 h-4" /> {turno === orden.length - 1 ? 'Ver Resultados' : 'Siguiente Jugador'} <ArrowRight className="w-4 h-4" />
+                  <Sparkles className="w-4 h-4" /> {turno === orden.length - 1 ? (sala.config.rondas !== 'infinito' && sala.rondaActual >= sala.config.rondas ? 'Terminar Partida y Ver Podio' : 'Ver Resultados') : 'Siguiente Jugador'} <ArrowRight className="w-4 h-4" />
                 </button>
               )}
             </div>

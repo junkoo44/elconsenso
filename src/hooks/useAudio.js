@@ -114,33 +114,34 @@ export const useAudio = () => {
   }, [initAudioContext]);
 
   /**
-   * Sonido sintético "Plop" ameno de burbuja utilizando rampas de frecuencia Tone.js
+   * Sonido sintético "Plop" ameno de gota/burbuja ascendente utilizando rampas Tone.js
    */
   const playPlop = useCallback(() => {
     try {
       initAudioContext().then(() => {
-        const osc = new Tone.Oscillator("F6", "sine").toDestination();
+        const osc = new Tone.Oscillator(350, "sine");
         const ampEnvelope = new Tone.AmplitudeEnvelope({
           attack: 0.001,
-          decay: 0.04,
+          decay: 0.03,
           sustain: 0,
-          release: 0.04
+          release: 0.015
         }).toDestination();
         
         osc.connect(ampEnvelope);
         
         const ahora = Tone.now();
         osc.start(ahora);
-        // Rampa de frecuencia ultra corta y descendente (burbuja de agua al explotar)
-        osc.frequency.setValueAtTime(1400, ahora); 
-        osc.frequency.exponentialRampToValueAtTime(380, ahora + 0.04); 
+        // Rampa de frecuencia ascendente de 350Hz a 1000Hz (gota ascendente)
+        osc.frequency.setValueAtTime(350, ahora); 
+        osc.frequency.exponentialRampToValueAtTime(1000, ahora + 0.025); 
         
-        ampEnvelope.triggerAttackRelease("0.04", ahora);
+        ampEnvelope.triggerAttackRelease(0.03, ahora);
+        osc.stop(ahora + 0.05);
         
         setTimeout(() => {
           osc.dispose();
           ampEnvelope.dispose();
-        }, 200);
+        }, 150);
       });
     } catch (e) {
       console.warn("Error al reproducir plop:", e);

@@ -12,8 +12,59 @@ export const useGame = () => {
 };
 
 export const GameProvider = ({ children }) => {
-  // Estado de navegación SPA
   const [vistaActual, setVistaActual] = useState('home');
+  const vistaActualRef = React.useRef('home');
+  const [modalSalirOpen, setModalSalirOpen] = useState(false);
+
+  // Interceptar el botón "Atrás" de Android y sincronizar historial
+  useEffect(() => {
+    vistaActualRef.current = vistaActual;
+  }, [vistaActual]);
+
+  useEffect(() => {
+    // Inicializar el historial con DOBLE FONDO
+    if (!window.history.state) {
+      window.history.replaceState({ base: true }, "");
+      window.history.pushState({ vista: 'home' }, "");
+    }
+
+    const handlePopState = (event) => {
+      // 1. Siempre emitimos señal de cerrar modales en cualquier retroceso
+      window.dispatchEvent(new Event('close-modals'));
+
+      // 2. Si llegamos al fondo falso, volvemos a empujar para que el historial nunca quede vacío
+      if (event.state && event.state.base) {
+        window.history.pushState({ vista: vistaActualRef.current }, "");
+        return;
+      }
+
+      // 3. Verificamos si estamos en una pantalla crítica que no debe cerrarse
+      const vistaBloqueada = ['game', 'online-ronda', 'online-revelacion'].includes(vistaActualRef.current);
+      
+      if (vistaBloqueada) {
+        setModalSalirOpen(true);
+        window.history.pushState({ vista: vistaActualRef.current }, "");
+        return;
+      }
+
+      // 4. Navegación normal
+      if (event.state && event.state.vista) {
+        setVistaActual(event.state.vista);
+      } else {
+        setVistaActual('home');
+        window.history.replaceState({ base: true }, "");
+        window.history.pushState({ vista: 'home' }, "");
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
+  const navegarA = (nuevaVista) => {
+    setVistaActual(nuevaVista);
+    window.history.pushState({ vista: nuevaVista }, "");
+  };
   
   // Lista de categorías global cargada desde Storage
   const [todasCategorias, setTodasCategorias] = useState([]);
@@ -300,7 +351,7 @@ export const GameProvider = ({ children }) => {
   return (
     <GameContext.Provider value={{
       vistaActual,
-      navegarA: setVistaActual,
+      navegarA,
       todasCategorias,
       jugadores,
       config,
@@ -328,7 +379,9 @@ export const GameProvider = ({ children }) => {
       temaActual,
       setTemaActual,
       cambiarSiguienteTema,
-      lectorRonda
+      lectorRonda,
+      modalSalirOpen,
+      setModalSalirOpen
     }}>
       {children}
     </GameContext.Provider>

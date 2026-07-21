@@ -19,6 +19,7 @@ import {
   Palette,
   HelpCircle
 } from 'lucide-react';
+import SpeakingHeadIcon from '../components/SpeakingHeadIcon';
 
 export default function Home() {
   const { 
@@ -47,6 +48,16 @@ export default function Home() {
   // Cargar el historial al montar la pantalla
   useEffect(() => {
     setHistorial(getHistory());
+
+    // Escuchar la orden global de cerrar modales (cuando el usuario presiona Atrás en Android)
+    const handleCloseModals = () => {
+      setModalAyudaOpen(false);
+      setMenuTemasOpen(false);
+      setPartidaSeleccionada(null);
+    };
+
+    window.addEventListener('close-modals', handleCloseModals);
+    return () => window.removeEventListener('close-modals', handleCloseModals);
   }, []);
 
   return (
@@ -97,7 +108,7 @@ export default function Home() {
           onClick={toggleMuteVoz}
           title={muteVoz ? "Activar lector de voz" : "Silenciar lector de voz"}
         >
-          {muteVoz ? <MicOff className="w-4 h-4 text-neon-red" /> : <Mic className="w-4 h-4 text-neon-purple" />}
+          <SpeakingHeadIcon className={`w-4 h-4 ${muteVoz ? 'text-neon-red' : 'text-neon-purple'}`} muted={muteVoz} />
         </button>
       </div>
 
@@ -112,7 +123,7 @@ export default function Home() {
         <div className="mt-1.5 inline-flex items-center justify-center gap-2">
           <span className="h-1.5 w-1.5 rounded-full bg-neon-green animate-ping"></span>
           <span className="text-text-sub text-[11px] font-bold tracking-widest uppercase">
-            Asistente para Unanimo
+            Pensá igual que el resto y ganá
           </span>
         </div>
       </div>

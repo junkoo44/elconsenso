@@ -61,13 +61,15 @@
   --color-neon-red: #7209B7;       /* Violeta arcade */
 }
 
-body {
+html, body {
   margin: 0;
   background-color: var(--color-space-dark);
   color: var(--color-text-main);
   min-height: 100vh;
   display: flex;
   flex-direction: column;
+  overscroll-behavior: none;
+  overscroll-behavior-y: none;
 }
 
 #root {

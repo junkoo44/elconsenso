@@ -1,0 +1,8 @@
+[{
+  "relation": ["delegate_permission/common.handle_all_urls"],
+  "target": {
+    "namespace": "android_app",
+    "package_name": "app.elconsenso.twa",
+    "sha256_cert_fingerprints": ["98:1C:D6:1F:65:16:34:B7:58:CA:EE:C4:95:9B:6E:29:D7:D1:BA:9C:B3:94:9E:E8:39:18:A0:3B:A6:8D:13:F0"]
+  }
+}]

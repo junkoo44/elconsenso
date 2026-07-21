@@ -4,10 +4,10 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <title>El Consenso — Asistente para Unanimo</title>
+    <title>El Consenso — Pensá igual que el resto y ganá</title>
     
     <!-- Meta tags SEO y PWA -->
-    <meta name="description" content="Asistente digital en mesa para jugar al Unanimo de forma presencial. Gestiona jugadores, tiempos y categorías." />
+    <meta name="description" content="Pensá igual que el resto y ganá. El party game multijugador para jugar con amigos y demostrar conexión mental." />
     <meta name="theme-color" content="#7C3AED" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
@@ -23,30 +23,6 @@
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
     
-    <!-- Registro del Service Worker -->
-    <script>
-      if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-          navigator.serviceWorker.register('/sw.js')
-            .then(reg => {
-              console.log('Service Worker registrado con éxito:', reg.scope);
-              
-              // Escuchar si hay actualizaciones en segundo plano
-              reg.addEventListener('updatefound', () => {
-                const newWorker = reg.installing;
-                newWorker.addEventListener('statechange', () => {
-                  // Si el nuevo service worker se instala y ya hay una versión previa controlando
-                  if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                    console.log('SW: Nueva versión detectada. Recargando aplicación...');
-                    window.location.reload();
-                  }
-                });
-              });
-            })
-            .catch(err => console.warn('Fallo al registrar el Service Worker:', err));
-        });
-      }
-    </script>
   </body>
 </html>
 

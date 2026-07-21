@@ -19,7 +19,13 @@ export default function RondaOnline() {
   const enviadoRef = useRef(enviado);
 
   const [faseRonda, setFaseRonda] = useState('intro'); // 'intro' o 'juego'
+  const faseRondaRef = useRef('intro');
   const [segundosIntro, setSegundosIntro] = useState(3);
+
+  const cambiarFaseRonda = (nuevaFase) => {
+    faseRondaRef.current = nuevaFase;
+    setFaseRonda(nuevaFase);
+  };
 
   // Sincronizar la referencia del estado enviado
   useEffect(() => {
@@ -41,7 +47,7 @@ export default function RondaOnline() {
         } else if (next === 0) {
           playCountdownBeep(880); // Beep agudo (arranca el juego!)
           clearInterval(timer);
-          setFaseRonda('juego');
+          cambiarFaseRonda('revelar_palabra');
         }
         return next;
       });
@@ -53,7 +59,7 @@ export default function RondaOnline() {
   // --- Leer la palabra en voz alta al empezar la ronda ---
   const vozHabladaRef = useRef(false);
   useEffect(() => {
-    if (faseRonda !== 'juego') return; // Esperar a que la intro termine!
+    if (faseRonda !== 'revelar_palabra') return; // Esperar a que la intro termine!
 
     if (sala?.palabraActual && !vozHabladaRef.current) {
       if (!muteVoz) {
@@ -64,7 +70,16 @@ export default function RondaOnline() {
         return () => clearTimeout(speakTimer);
       }
     }
-  }, [sala?.rondaActual, sala?.palabraActual, muteVoz, speakCategory, faseRonda]);
+  }, [sala?.palabraActual, muteVoz, speakCategory, faseRonda]);
+
+  // --- Transición automática de revelar_palabra a juego ---
+  useEffect(() => {
+    if (faseRonda !== 'revelar_palabra') return;
+    const timer = setTimeout(() => {
+      cambiarFaseRonda('juego');
+    }, 2500);
+    return () => clearTimeout(timer);
+  }, [faseRonda]);
 
   // Reinicia el formulario cada vez que arranca una ronda nueva
   useEffect(() => {
@@ -73,12 +88,12 @@ export default function RondaOnline() {
     yaEnvieAlCerrar.current = false;
     vozHabladaRef.current = false;
     setTiempoRestante(sala?.config?.tiempo ?? 75);
-    setFaseRonda('intro'); // Volver a activar intro para la nueva ronda
+    cambiarFaseRonda('intro'); // Volver a activar intro para la nueva ronda
     setSegundosIntro(3);
   }, [sala?.rondaActual]);
 
   useEffect(() => {
-    if (faseRonda !== 'juego') return; // Esperar a que la intro termine!
+    if (faseRondaRef.current !== 'juego') return; // Esperar a que la intro termine!
 
     intervalRef.current = setInterval(() => {
       setTiempoRestante((t) => {
@@ -153,6 +168,19 @@ export default function RondaOnline() {
     const apariciones = palabrasNormalizadas.filter(p => p === norm).length;
     return apariciones > 1;
   };
+
+  if (faseRonda === 'revelar_palabra') {
+    return (
+      <div className="flex flex-col flex-1 p-6 max-w-md mx-auto w-full justify-center items-center text-center bg-space-dark relative min-h-screen animate-scale-up">
+        <p className="text-neon-green text-xs font-black uppercase tracking-widest mb-6">
+          La palabra es...
+        </p>
+        <p className="text-4xl md:text-5xl font-black uppercase text-white tracking-wide border-y border-slate-900 py-6 w-full drop-shadow-[0_4px_12px_rgba(124,58,237,0.15)] font-display">
+          {sala.palabraActual}
+        </p>
+      </div>
+    );
+  }
 
   if (faseRonda === 'intro') {
     return (

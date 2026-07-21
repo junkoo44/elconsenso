@@ -25,7 +25,7 @@ export default function OnlineHome() {
         </div>
         <h1 className="text-2xl font-black tracking-widest uppercase font-display">Modo Online</h1>
         <p className="text-text-sub text-xs font-semibold mt-2 leading-relaxed">
-          Cada jugador con su celu. Nada de hoja de papel: las palabras y los puntos se cargan solos.
+          Creá una sala y compartí el código, o unite a una.
         </p>
       </div>
 

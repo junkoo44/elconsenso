@@ -61,7 +61,7 @@ export const DEFAULT_CATEGORIES = [
       "Triatlón", "Maratón", "Pentatlón", "Decatlón", "Salto alto", "Salto largo", "Lanzamiento",
       "Jabalina", "Disco", "Martillo", "Pértiga", "Escalada", "Paracaidismo", "Parapente", "Alas delta",
       "Buceo", "Crossfit", "Pilates", "Yoga", "Gimnasia", "Trampolín", "Halterofilia", "Powerlifting",
-      "Culturismo", "Bádminton", "Squash", "Padel", "Ping pong", "Billar", "Bolos", "Dardos",
+      "Culturismo", "Bádminton", "Padel", "Ping pong", "Billar", "Bolos", "Dardos",
       "Ajedrez", "Bridge", "Pesca deportiva", "Senderismo", "Bmx"
     ]
   },
@@ -151,7 +151,7 @@ export const DEFAULT_CATEGORIES = [
 ];
 
 const STORAGE_KEYS = {
-  CATEGORIES: "consenso_categories_v4", // Cambiamos clave para forzar la carga limpia del nuevo banco masivo
+  CATEGORIES: "consenso_categories_v5", // Cambiamos clave para forzar la carga limpia del nuevo banco masivo
   HISTORY: "consenso_history"
 };
 
@@ -237,6 +237,10 @@ export const getHistory = () => {
 export const saveMatchToHistory = (match) => {
   try {
     const currentHistory = getHistory();
+    if (match.claveUnica && currentHistory.some(m => m.claveUnica === match.claveUnica)) {
+      console.log("Partida omitida en el historial local: ya estaba guardada.");
+      return currentHistory;
+    }
     const updatedHistory = [match, ...currentHistory];
     localStorage.setItem(STORAGE_KEYS.HISTORY, JSON.stringify(updatedHistory));
     return updatedHistory;

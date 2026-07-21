@@ -14,6 +14,7 @@ import {
   enviarReaccionOnline,
 } from '../services/salaService';
 
+import { saveMatchToHistory } from '../services/categories';
 import { db } from '../services/firebase';
 import { ref, get } from 'firebase/database';
 
@@ -35,6 +36,7 @@ export const OnlineGameProvider = ({ children }) => {
   const [cargando, setCargando] = useState(false);
 
   const unsubscribeRef = useRef(null);
+  const guardadoRef = useRef(false);
 
   // Intentar reconexión automática al montar si hay una partida activa guardada en cache
   useEffect(() => {
@@ -44,6 +46,17 @@ export const OnlineGameProvider = ({ children }) => {
       const codigoGuardado = localStorage.getItem("consenso_online_codigo");
       const idGuardado = localStorage.getItem("consenso_online_jugador_id");
       
+      const path = window.location.pathname;
+      const matchUrl = path.match(/^\/sala\/([a-zA-Z0-9]{5})$/i);
+      const codigoUrl = matchUrl ? matchUrl[1].toUpperCase() : null;
+
+      if (codigoUrl && codigoGuardado && codigoUrl !== codigoGuardado.toUpperCase()) {
+        console.log(`Deep link detectado para nueva sala ${codigoUrl}, limpiando sesión vieja de ${codigoGuardado}`);
+        localStorage.removeItem("consenso_online_codigo");
+        localStorage.removeItem("consenso_online_jugador_id");
+        return; // No intentamos reconectar, dejamos que App.jsx procese el link nuevo
+      }
+
       if (codigoGuardado && idGuardado) {
         try {
           const salaSnap = await get(ref(db, `salas/${codigoGuardado}`));
@@ -89,6 +102,42 @@ export const OnlineGameProvider = ({ children }) => {
       if (unsubscribeRef.current) unsubscribeRef.current();
     };
   }, [codigoSala]);
+
+  // --- Guardado automático en el historial cuando finaliza la sala ---
+  useEffect(() => {
+    if (sala?.estado === 'finalizada' && codigoSala && !guardadoRef.current) {
+      try {
+        const sortedScores = Object.entries(sala.puntajes || {})
+          .map(([id, puntos]) => ({
+            nombre: sala.jugadores?.[id]?.nombre || 'Jugador',
+            puntos
+          }))
+          .sort((a, b) => b.puntos - a.puntos);
+
+        const ganador = sortedScores.length > 0 ? sortedScores[0].nombre : "Sin ganador";
+
+        const now = new Date();
+        const registroPartida = {
+          fecha: now.toLocaleDateString(),
+          hora: now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          ganador,
+          tablaFinal: sortedScores,
+          claveUnica: `online_${codigoSala}`
+        };
+
+        saveMatchToHistory(registroPartida);
+        console.log("Partida online guardada en el historial desde el contexto.");
+        guardadoRef.current = true;
+      } catch (e) {
+        console.warn("Fallo al guardar la partida online en el historial:", e);
+      }
+    }
+    
+    // Si entramos a otra sala distinta o se resetea, permitimos guardar de nuevo
+    if (sala?.estado === 'lobby') {
+      guardadoRef.current = false;
+    }
+  }, [sala?.estado, sala?.puntajes, sala?.jugadores, codigoSala]);
 
   const crear = useCallback(async (nombreHost, configInicial) => {
     setCargando(true);
@@ -160,6 +209,11 @@ export const OnlineGameProvider = ({ children }) => {
   const arrancarRevelacion = useCallback(() => {
     if (!codigoSala || !sala) return;
     const ordenRevelacion = Object.keys(sala.jugadores);
+    // Mezclar orden de forma aleatoria (Fisher-Yates)
+    for (let i = ordenRevelacion.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [ordenRevelacion[i], ordenRevelacion[j]] = [ordenRevelacion[j], ordenRevelacion[i]];
+    }
     return iniciarRevelacion(codigoSala, sala.palabrasEnviadas || {}, ordenRevelacion);
   }, [codigoSala, sala]);
 

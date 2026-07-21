@@ -1,29 +1,39 @@
 {
+  "id": "/",
   "name": "El Consenso",
   "short_name": "Consenso",
-  "description": "App asistente para el juego de mesa Unanimo",
-  "start_url": ".",
+  "description": "PENSÁ IGUAL QUE EL RESTO Y GANÁ",
+  "start_url": "/",
   "display": "standalone",
   "background_color": "#1A1A2E",
   "theme_color": "#7C3AED",
   "orientation": "portrait-primary",
   "icons": [
     {
-      "src": "favicon.ico",
-      "sizes": "64x64 32x32 24x24 16x16",
-      "type": "image/x-icon"
-    },
-    {
-      "src": "icon-192.png",
+      "src": "/icon-192.png",
       "type": "image/png",
       "sizes": "192x192",
       "purpose": "any maskable"
     },
     {
-      "src": "icon-512.png",
+      "src": "/icon-512.png",
       "type": "image/png",
       "sizes": "512x512",
       "purpose": "any maskable"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/screenshot-mobile.png",
+      "sizes": "1080x1920",
+      "type": "image/png",
+      "form_factor": "narrow"
+    },
+    {
+      "src": "/screenshot-desktop.png",
+      "sizes": "1920x1080",
+      "type": "image/png",
+      "form_factor": "wide"
     }
   ]
 }
