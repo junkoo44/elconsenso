@@ -2,33 +2,34 @@ import React, { useState, useEffect } from 'react';
 import { useGame } from '../context/GameContext';
 import { useLongPress } from '../hooks/useLongPress';
 import { saveCategories, DEFAULT_CATEGORIES } from '../services/categories';
-import { 
-  Users, 
-  UserPlus, 
-  Settings, 
-  Clock, 
-  ChevronLeft, 
-  Plus, 
-  X, 
-  Trash2, 
-  RotateCcw, 
-  Edit3, 
+import {
+  Users,
+  UserPlus,
+  Settings,
+  Clock,
+  ChevronLeft,
+  Plus,
+  X,
+  Trash2,
+  RotateCcw,
+  Edit3,
   Check,
   Play,
   FileSpreadsheet,
   AlertCircle
 } from 'lucide-react';
+import { limpiarPalabraInput } from '../services/salaService';
 
 export default function Setup() {
-  const { 
-    todasCategorias, 
-    config, 
-    setConfig, 
-    jugadores, 
-    setJugadores, 
+  const {
+    todasCategorias,
+    config,
+    setConfig,
+    jugadores,
+    setJugadores,
     iniciarNuevaPartida,
     recargarCategorias,
-    navegarA 
+    navegarA
   } = useGame();
 
   // Estados locales para el formulario de configuración
@@ -83,7 +84,7 @@ export default function Setup() {
     e.preventDefault();
     if (!nombreJugador.trim()) return;
     const nombreClean = capitalizarNombre(nombreJugador.trim());
-    
+
     if (jugadores.includes(nombreClean)) {
       lanzarError("Ese jugador ya está en la lista.");
       return;
@@ -92,7 +93,7 @@ export default function Setup() {
       lanzarError("Límite máximo de 10 jugadores alcanzado.");
       return;
     }
-    
+
     setJugadores(prev => [...prev, nombreClean]);
     setNombreJugador("");
   };
@@ -145,7 +146,7 @@ export default function Setup() {
     e.preventDefault();
     const nombreClean = nuevaCatNombre.trim();
     if (!nombreClean) return;
-    
+
     if (todasCategorias.some(c => c.nombre.toLowerCase() === nombreClean.toLowerCase())) {
       lanzarError("Esta categoría ya existe.");
       return;
@@ -161,7 +162,7 @@ export default function Setup() {
     const actualizadas = [...todasCategorias, nuevaCat];
     saveCategories(actualizadas);
     recargarCategorias();
-    
+
     setCategoriasActivasLocales(prev => [...prev, nuevaCat.id]);
     setNuevaCatNombre("");
     setModalNuevaCatOpen(false);
@@ -175,9 +176,9 @@ export default function Setup() {
 
   const handleAgregarPalabra = (e) => {
     e.preventDefault();
-    const palClean = nuevaPalabra.trim();
+    const palClean = limpiarPalabraInput(nuevaPalabra);
     if (!palClean) return;
-    
+
     if (categoriaEnEdicion.palabras.some(p => p.toLowerCase() === palClean.toLowerCase())) {
       lanzarError("Esta palabra ya existe en la categoría.");
       return;
@@ -218,7 +219,7 @@ export default function Setup() {
     const actualizadas = todasCategorias.filter(c => c.id !== targetId);
     saveCategories(actualizadas);
     recargarCategorias();
-    
+
     setCategoriasActivasLocales(prev => prev.filter(id => id !== targetId));
     setConfirmarEliminarCat(null);
     setCategoriaEnEdicion(null);
@@ -241,7 +242,7 @@ export default function Setup() {
     if (!categoriaEnEdicion || categoriaEnEdicion.esPropia) return false;
     const original = DEFAULT_CATEGORIES.find(c => c.id === categoriaEnEdicion.id);
     if (!original) return false;
-    
+
     if (original.palabras.length !== categoriaEnEdicion.palabras.length) return true;
     return categoriaEnEdicion.palabras.some(p => !original.palabras.includes(p));
   };
@@ -271,7 +272,7 @@ export default function Setup() {
   // Componente Chip de Categoría
   const CategoriaChip = ({ cat }) => {
     const activa = categoriasActivasLocales.includes(cat.id);
-    
+
     const handlers = useLongPress(
       () => abrirEditorCategoria(cat),
       () => toggleCategoria(cat.id),
@@ -282,11 +283,10 @@ export default function Setup() {
       <button
         type="button"
         {...handlers}
-        className={`btn-touch px-3 py-2 rounded-xl text-xs font-bold border flex items-center justify-center text-center gap-1.5 select-none cursor-pointer transition-all ${
-          activa 
-            ? 'bg-neon-purple border-neon-purple text-white shadow-md shadow-neon-purple/20' 
+        className={`btn-touch px-3 py-2 rounded-xl text-xs font-bold border flex items-center justify-center text-center gap-1.5 select-none cursor-pointer transition-all ${activa
+            ? 'bg-neon-purple border-neon-purple text-white shadow-md shadow-neon-purple/20'
             : 'bg-slate-900/40 border-slate-805/80 text-text-sub hover:border-slate-700'
-        }`}
+          }`}
       >
         <span className="truncate max-w-[100px]">{cat.nombre}</span>
         {cat.esPropia && (
@@ -298,7 +298,7 @@ export default function Setup() {
 
   return (
     <div className="flex-1 w-full max-w-md mx-auto flex flex-col gap-3.5 py-3 px-3.5 relative">
-      
+
       {/* ⚠️ Banner de Notificación de Error */}
       {notificacionError && (
         <div className="fixed top-4 left-4 right-4 z-50 flex items-center gap-2 bg-neon-red border-2 border-red-500 text-white font-extrabold text-xs px-4 py-3 rounded-2xl shadow-2xl animate-scale-up">
@@ -309,8 +309,8 @@ export default function Setup() {
 
       {/* 🧾 Header */}
       <div className="flex items-center justify-between border-b border-slate-900 pb-3">
-        <button 
-          type="button" 
+        <button
+          type="button"
           className="text-xs font-bold text-text-sub hover:text-white flex items-center gap-1 btn-touch cursor-pointer transition-colors"
           onClick={() => navegarA('home')}
         >
@@ -327,7 +327,7 @@ export default function Setup() {
         <h3 className="text-xs font-black tracking-widest uppercase text-neon-green flex items-center gap-2">
           <Users className="w-4 h-4" /> Jugadores ({jugadores.length})
         </h3>
-        
+
         <form onSubmit={handleAgregarJugador} className="flex gap-2">
           <input
             type="text"
@@ -352,7 +352,7 @@ export default function Setup() {
         ) : (
           <div className="flex flex-wrap gap-1.5 max-h-20 overflow-y-auto pr-1">
             {jugadores.map((j) => (
-              <div 
+              <div
                 key={j}
                 className="bg-slate-950 border border-slate-850 rounded-lg py-1 pl-2.5 pr-1.5 text-[11px] font-bold flex items-center gap-1.5 animate-scale-up"
               >
@@ -382,7 +382,7 @@ export default function Setup() {
             <div>
               <span className="font-extrabold block">Cantidad de Rondas</span>
             </div>
-            
+
             <div className="flex items-center gap-4">
               <label className="flex items-center gap-1.5 cursor-pointer text-xs font-extrabold text-text-sub select-none">
                 <input
@@ -459,13 +459,13 @@ export default function Setup() {
             <div className="max-w-[70%]">
               <span className="font-extrabold block">Llevar Puntaje</span>
               <span className="text-[9.5px] text-text-sub font-bold tracking-wide uppercase leading-tight block mt-0.5">
-                Activalo para usar el tanteador digital de la app, o desactivalo para anotar los puntos en tu hoja
+                Activalo para llevar los puntos en la app, o desactivalo para anotar los puntos en tu hoja
               </span>
             </div>
-            
+
             <label className="relative inline-flex items-center cursor-pointer select-none">
-              <input 
-                type="checkbox" 
+              <input
+                type="checkbox"
                 className="sr-only peer"
                 checked={llevarPuntajeLocal}
                 onChange={(e) => setLlevarPuntajeLocal(e.target.checked)}
@@ -508,11 +508,10 @@ export default function Setup() {
         <button
           type="button"
           disabled={jugadores.length < 3 || categoriasActivasLocales.length === 0}
-          className={`btn-touch w-full py-4 text-center font-extrabold text-xs uppercase tracking-widest rounded-2xl border-b-4 flex items-center justify-center gap-2 ${
-            jugadores.length < 3 || categoriasActivasLocales.length === 0
+          className={`btn-touch w-full py-4 text-center font-extrabold text-xs uppercase tracking-widest rounded-2xl border-b-4 flex items-center justify-center gap-2 ${jugadores.length < 3 || categoriasActivasLocales.length === 0
               ? 'bg-slate-800 border-slate-850 text-slate-500 cursor-not-allowed opacity-50'
               : 'bg-neon-purple hover:bg-violet-750 text-white shadow-xl shadow-neon-purple/20 border-violet-900 cursor-pointer'
-          }`}
+            }`}
           onClick={handleJugar}
         >
           <Play className="w-4 h-4" /> JUGAR PARTIDA
@@ -522,14 +521,14 @@ export default function Setup() {
       {/* ➕ Modal: Nueva Categoría */}
       {modalNuevaCatOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-          <form 
+          <form
             onSubmit={handleCrearCategoriaPropia}
             className="bg-space-dark border-2 border-neon-purple rounded-2xl max-w-xs w-full p-6 shadow-2xl relative animate-scale-up"
           >
             <h3 className="text-sm font-black tracking-widest uppercase text-white mb-4 font-display">
               Nueva Categoría Propia
             </h3>
-            
+
             <input
               type="text"
               required
@@ -565,7 +564,7 @@ export default function Setup() {
       {categoriaEnEdicion && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
           <div className="bg-space-dark border-2 border-neon-purple rounded-2xl max-w-sm w-full p-6 shadow-2xl relative animate-scale-up flex flex-col max-h-[90vh]">
-            
+
             <button
               type="button"
               className="absolute top-3 right-3 text-text-sub hover:text-white p-1 hover:bg-slate-900 rounded-lg cursor-pointer"
@@ -589,9 +588,10 @@ export default function Setup() {
               <input
                 type="text"
                 className="flex-1 bg-slate-950 border border-slate-850 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-neon-purple font-semibold"
-                placeholder="Nueva palabra"
+                placeholder="Nueva palabra (máx 22 letras)"
                 value={nuevaPalabra}
-                onChange={(e) => setNuevaPalabra(e.target.value)}
+                maxLength={22}
+                onChange={(e) => setNuevaPalabra(limpiarPalabraInput(e.target.value))}
               />
               <button
                 type="submit"
@@ -608,7 +608,7 @@ export default function Setup() {
                 </p>
               ) : (
                 categoriaEnEdicion.palabras.map((p) => (
-                  <div 
+                  <div
                     key={p}
                     className="bg-slate-900/60 border border-slate-850 rounded-lg p-2.5 flex justify-between items-center text-xs font-semibold"
                   >

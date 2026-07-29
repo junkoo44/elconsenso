@@ -1,10 +1,10 @@
 import React, { useEffect, useRef } from 'react';
 import { useGame } from '../context/GameContext';
 import { useAudio } from '../hooks/useAudio';
-import { 
-  Trophy, 
-  Crown, 
-  RotateCcw, 
+import {
+  Trophy,
+  Crown,
+  RotateCcw,
   Home as HomeIcon,
   Sparkles,
   Award
@@ -111,9 +111,9 @@ export default function Podium() {
 
   return (
     <div className="flex-1 w-full max-w-md mx-auto flex flex-col justify-between py-6 px-4 relative z-10 overflow-hidden">
-      <canvas 
-        ref={canvasRef} 
-        className="fixed inset-0 pointer-events-none z-0" 
+      <canvas
+        ref={canvasRef}
+        className="fixed inset-0 pointer-events-none z-0"
       />
 
       {/* Trophy Cabecera */}
@@ -131,21 +131,21 @@ export default function Podium() {
 
       {/* Podio */}
       <div className="flex-1 flex flex-col justify-center gap-4 py-4 relative z-10">
-        
+
         {/* Ganador Principal */}
         {ganador && (
           <div className="bg-gradient-to-br from-violet-950/70 to-slate-900/90 border-2 border-yellow-500/80 rounded-3xl p-6 text-center shadow-2xl relative overflow-hidden animate-scale-up">
             <div className="absolute top-3 right-4 text-[9px] font-black text-yellow-500 uppercase tracking-widest animate-pulse flex items-center gap-1">
               <Crown className="w-3.5 h-3.5 text-yellow-500" /> 1° Puesto
             </div>
-            
+
             <div className="text-[10px] font-bold text-text-sub uppercase tracking-wider mb-1.5">
-              Gran Ganador
+              Ganador
             </div>
             <div className="text-3xl font-black text-yellow-400 tracking-wide mb-3 truncate font-display">
               {ganador.nombre}
             </div>
-            
+
             <div className="inline-flex items-center gap-1.5 px-4 py-2 bg-yellow-500/10 border border-yellow-500/30 rounded-2xl text-yellow-400 font-extrabold text-xs tracking-widest uppercase">
               <Sparkles className="w-4 h-4 text-yellow-500" /> {ganador.puntos} puntos
             </div>
@@ -163,9 +163,8 @@ export default function Podium() {
                   className="bg-slate-950/60 border border-slate-850 rounded-xl px-4 py-3 flex justify-between items-center text-xs"
                 >
                   <div className="flex items-center gap-2">
-                    <span className={`font-black w-5 text-center text-xs ${
-                      puesto === 2 ? 'text-slate-400' : puesto === 3 ? 'text-amber-600' : 'text-text-sub'
-                    }`}>
+                    <span className={`font-black w-5 text-center text-xs ${puesto === 2 ? 'text-slate-400' : puesto === 3 ? 'text-amber-600' : 'text-text-sub'
+                      }`}>
                       {puesto}°
                     </span>
                     <span className="font-extrabold text-white">{jug.nombre}</span>

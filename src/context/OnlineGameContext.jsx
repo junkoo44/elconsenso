@@ -9,14 +9,15 @@ import {
   iniciarRevelacion,
   avanzarTurnoRevelacion,
   finalizarRevelacionRonda,
-  salirDeSala,
   avanzarPalabraRevelacion,
   enviarReaccionOnline,
+  reiniciarPartidaOnline,
+  salirDeSala,
 } from '../services/salaService';
 
 import { saveMatchToHistory } from '../services/categories';
 import { db } from '../services/firebase';
-import { ref, get } from 'firebase/database';
+import { ref, get, update, onDisconnect, onValue, runTransaction } from 'firebase/database';
 
 const OnlineGameContext = createContext();
 
@@ -34,6 +35,7 @@ export const OnlineGameProvider = ({ children }) => {
   const [sala, setSala] = useState(null); // snapshot en vivo de la sala completa
   const [error, setError] = useState(db ? null : 'Firebase no está configurado. Por favor, agregá las variables de entorno VITE_FIREBASE_* en tu panel de Vercel.');
   const [cargando, setCargando] = useState(false);
+  const [propuestaReconexion, setPropuestaReconexion] = useState(null);
 
   const unsubscribeRef = useRef(null);
   const guardadoRef = useRef(false);
@@ -62,20 +64,24 @@ export const OnlineGameProvider = ({ children }) => {
           const salaSnap = await get(ref(db, `salas/${codigoGuardado}`));
           if (salaSnap.exists()) {
             const datosSala = salaSnap.val();
-            // Solo reconectar si la sala no finalizó y el jugador está registrado
-            if (datosSala.estado !== 'finalizada' && datosSala.jugadores?.[idGuardado]) {
-              console.log(`Reconectado automáticamente a la sala ${codigoGuardado}`);
-              setCodigoSala(codigoGuardado);
-              setJugadorId(idGuardado);
-              
-              // Sincronizar URL si es necesario
-              if (!window.location.pathname.includes(`/sala/${codigoGuardado}`)) {
-                window.history.pushState({}, '', `/sala/${codigoGuardado}`);
-              }
+            
+            // Validar antigüedad de la sala (máximo 3 horas)
+            const esAntigua = datosSala.creadaEn 
+              ? (Date.now() - datosSala.creadaEn) > 3 * 60 * 60 * 1000 
+              : false;
+
+            // Solo proponer reconexión si la sala no finalizó, el jugador está registrado y no es antigua
+            if (datosSala.estado !== 'finalizada' && datosSala.jugadores?.[idGuardado] && !esAntigua) {
+              console.log(`Propuesta de reconexión detectada para la sala ${codigoGuardado}`);
+              setPropuestaReconexion({
+                codigo: codigoGuardado,
+                jugadorId: idGuardado,
+                estado: datosSala.estado
+              });
               return;
             }
           }
-          // Si no es válida, limpiamos cache
+          // Si no es válida o es antigua, limpiamos cache
           localStorage.removeItem("consenso_online_codigo");
           localStorage.removeItem("consenso_online_jugador_id");
         } catch (e) {
@@ -85,6 +91,23 @@ export const OnlineGameProvider = ({ children }) => {
     };
     
     intentarReconexion();
+  }, []);
+
+  const confirmarReconexion = useCallback(() => {
+    if (!propuestaReconexion) return;
+    const { codigo, jugadorId: id } = propuestaReconexion;
+    setCodigoSala(codigo);
+    setJugadorId(id);
+    setPropuestaReconexion(null);
+    if (!window.location.pathname.includes(`/sala/${codigo}`)) {
+      window.history.pushState({}, '', `/sala/${codigo}`);
+    }
+  }, [propuestaReconexion]);
+
+  const descartarReconexion = useCallback(() => {
+    localStorage.removeItem("consenso_online_codigo");
+    localStorage.removeItem("consenso_online_jugador_id");
+    setPropuestaReconexion(null);
   }, []);
 
   // Se suscribe a la sala cada vez que cambia el código
@@ -102,6 +125,60 @@ export const OnlineGameProvider = ({ children }) => {
       if (unsubscribeRef.current) unsubscribeRef.current();
     };
   }, [codigoSala]);
+
+  // --- 1. Sincronizar presencia 'conectado: true' usando .info/connected para autorecuperación tras cortes de red ---
+  useEffect(() => {
+    if (!db || !codigoSala || !jugadorId) return;
+
+    const connectedRef = ref(db, '.info/connected');
+    const unsubscribe = onValue(connectedRef, (snap) => {
+      if (snap.val() === true) {
+        const jugadorConectadoRef = ref(db, `salas/${codigoSala}/jugadores/${jugadorId}/conectado`);
+        onDisconnect(jugadorConectadoRef).set(false);
+        update(ref(db, `salas/${codigoSala}/jugadores/${jugadorId}`), { conectado: true });
+      }
+    });
+
+    return () => unsubscribe();
+  }, [codigoSala, jugadorId]);
+
+  // --- 2. Herencia de Host atómica: Si el Host actual se desconecta, el primer jugador activo toma la corona vía transacción ---
+  useEffect(() => {
+    if (!db || !codigoSala || !sala || !sala.jugadores) return;
+
+    const hostIdActual = sala.host;
+    const hostActualConectado = sala.jugadores[hostIdActual]?.conectado;
+
+    if (!hostActualConectado) {
+      const conectados = Object.entries(sala.jugadores)
+        .filter(([_, d]) => d.conectado)
+        .map(([id, d]) => ({ id, ...d }));
+
+      if (conectados.length > 0) {
+        const nuevoHost = conectados[0];
+
+        if (nuevoHost.id === jugadorId) {
+          const salaRef = ref(db, `salas/${codigoSala}`);
+          runTransaction(salaRef, (salaData) => {
+            if (!salaData || !salaData.jugadores) return salaData;
+            const hostActual = salaData.host;
+            // Verificamos atómicamente en el servidor si el host sigue desconectado o nulo
+            if (!hostActual || !salaData.jugadores[hostActual]?.conectado) {
+              console.log(`👑 Jugador ${jugadorId} toma la corona de Host en la sala ${codigoSala} (Transacción atómica)`);
+              salaData.host = jugadorId;
+              if (hostActual && salaData.jugadores[hostActual]) {
+                salaData.jugadores[hostActual].esHost = false;
+              }
+              if (salaData.jugadores[jugadorId]) {
+                salaData.jugadores[jugadorId].esHost = true;
+              }
+            }
+            return salaData;
+          });
+        }
+      }
+    }
+  }, [sala, codigoSala, jugadorId]);
 
   // --- Guardado automático en el historial cuando finaliza la sala ---
   useEffect(() => {
@@ -207,15 +284,9 @@ export const OnlineGameProvider = ({ children }) => {
   }, [codigoSala, jugadorId]);
 
   const arrancarRevelacion = useCallback(() => {
-    if (!codigoSala || !sala) return;
-    const ordenRevelacion = Object.keys(sala.jugadores);
-    // Mezclar orden de forma aleatoria (Fisher-Yates)
-    for (let i = ordenRevelacion.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [ordenRevelacion[i], ordenRevelacion[j]] = [ordenRevelacion[j], ordenRevelacion[i]];
-    }
-    return iniciarRevelacion(codigoSala, sala.palabrasEnviadas || {}, ordenRevelacion);
-  }, [codigoSala, sala]);
+    if (!codigoSala) return;
+    return iniciarRevelacion(codigoSala);
+  }, [codigoSala]);
 
   const siguienteTurnoRevelacion = useCallback(() => {
     if (!codigoSala) return;
@@ -237,6 +308,11 @@ export const OnlineGameProvider = ({ children }) => {
     return enviarReaccionOnline(codigoSala, jugadorId, emoji);
   }, [codigoSala, jugadorId]);
 
+  const reiniciarPartida = useCallback(() => {
+    if (!codigoSala) return;
+    return reiniciarPartidaOnline(codigoSala);
+  }, [codigoSala]);
+
   // Helpers derivados, pensados para no repetir lógica en cada pantalla
   const soyHost = sala?.host === jugadorId;
   const miNombre = sala?.jugadores?.[jugadorId]?.nombre;
@@ -247,7 +323,7 @@ export const OnlineGameProvider = ({ children }) => {
     sala && sala.jugadores
       ? Object.entries(sala.jugadores)
           .filter(([_, datos]) => datos.conectado) // Solo esperar a los que siguen conectados
-          .every(([id, _]) => (sala.palabrasEnviadas?.[id]?.length ?? 0) > 0)
+          .every(([id, _]) => sala.palabrasEnviadas?.[id] !== undefined)
       : false;
 
   return (
@@ -274,6 +350,10 @@ export const OnlineGameProvider = ({ children }) => {
         siguientePalabraRevelacion,
         cerrarRondaYAvanzar,
         mandarReaccion,
+        reiniciarPartida,
+        propuestaReconexion,
+        confirmarReconexion,
+        descartarReconexion,
       }}
     >
       {children}

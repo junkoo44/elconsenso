@@ -37,7 +37,7 @@ export default function CrearSala() {
 
       <h1 className="text-xl font-black tracking-widest uppercase font-display mb-1">Crear Sala</h1>
       <p className="text-text-sub text-xs font-semibold mb-8">
-        Vas a ser el anfitrión. Después te paso el link para que se sumen los demás.
+        Vas a ser el anfitrión. Podras compartir el link para que se sumen los demás.
       </p>
 
       <label className="text-[10px] font-bold uppercase tracking-widest text-text-sub mb-2">
@@ -47,6 +47,7 @@ export default function CrearSala() {
         type="text"
         value={nombre}
         onChange={(e) => setNombre(e.target.value.replace(/\s/g, ''))}
+        onKeyDown={(e) => { if (e.key === 'Enter' && nombre.trim() && !cargando) handleCrear(); }}
         placeholder="¿Cómo te llamás?"
         maxLength={20}
         className="w-full bg-slate-900/60 border border-slate-805/85 rounded-xl px-4 py-3.5 text-white font-bold mb-6 outline-none focus:border-neon-purple"

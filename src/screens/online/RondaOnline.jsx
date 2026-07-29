@@ -3,6 +3,7 @@ import { useGame } from '../../context/GameContext';
 import { useOnlineGame } from '../../context/OnlineGameContext';
 import { useAudio } from '../../hooks/useAudio';
 import { Clock, Users, CheckCircle2 } from 'lucide-react';
+import { limpiarPalabraInput } from '../../services/salaService';
 
 export default function RondaOnline() {
   const { navegarA, muteSonidos, muteVoz } = useGame();
@@ -136,11 +137,37 @@ export default function RondaOnline() {
     }
   }, [tiempoRestante, palabras, mandarPalabras]);
 
+  // --- Auto-arranque de la revelación por el Host o el primer jugador activo ---
+  const yaArrancoRevelacionRef = useRef(false);
+
+  useEffect(() => {
+    yaArrancoRevelacionRef.current = false;
+  }, [sala?.rondaActual]);
+
+  const primerConectadoId = listaJugadores.find((j) => j.conectado)?.id;
+  const soyEncargadoRevelacion = soyHost || (!listaJugadores.find((j) => (j.esHost || j.id === sala.host))?.conectado && primerConectadoId === jugadorId);
+
+  useEffect(() => {
+    if (sala?.estado !== 'jugando' || yaArrancoRevelacionRef.current) return;
+
+    const condicionCumplida = todosEnviaronPalabras || tiempoRestante === 0;
+
+    if (condicionCumplida) {
+      // Si soy el encargado (Host), ejecuto a 1s. Si soy otro jugador, ejecuto a 3.5s como respaldo si el host se colgó
+      const delay = soyEncargadoRevelacion ? 1000 : 3500;
+      yaArrancoRevelacionRef.current = true;
+
+      setTimeout(() => {
+        arrancarRevelacion();
+      }, delay);
+    }
+  }, [soyEncargadoRevelacion, sala?.estado, todosEnviaronPalabras, tiempoRestante, arrancarRevelacion]);
+
   if (!sala) return null;
 
   const actualizarPalabra = (idx, valor) => {
     const copia = [...palabras];
-    copia[idx] = valor;
+    copia[idx] = limpiarPalabraInput(valor);
     setPalabras(copia);
   };
 
@@ -152,7 +179,7 @@ export default function RondaOnline() {
 
   const jugadoresActivos = listaJugadores.filter((j) => j.conectado);
   const cantidadEnviaron = jugadoresActivos.filter(
-    (j) => (sala.palabrasEnviadas?.[j.id]?.length ?? 0) > 0
+    (j) => sala.palabrasEnviadas?.[j.id] !== undefined
   ).length;
 
   // Helper local para normalizar y detectar duplicados en tiempo real
@@ -197,8 +224,8 @@ export default function RondaOnline() {
           {/* Círculo animado de fondo */}
           <div className="absolute inset-0 rounded-full border border-neon-purple/20 animate-ping" />
           <div className="absolute inset-2 rounded-full border-2 border-neon-purple/40" />
-          
-          <span 
+
+          <span
             className="text-7xl font-black font-display text-neon-purple animate-scale-up"
             key={segundosIntro}
           >
@@ -221,9 +248,8 @@ export default function RondaOnline() {
           {sala.config.rondas !== 'infinito' ? ` / ${sala.config.rondas}` : ''}
         </span>
         <span
-          className={`flex items-center gap-1.5 text-sm font-black ${
-            tiempoRestante <= 10 ? 'text-neon-red animate-pulse animate-scale-up' : 'text-neon-green'
-          }`}
+          className={`flex items-center gap-1.5 text-sm font-black ${tiempoRestante <= 10 ? 'text-neon-red animate-pulse animate-scale-up' : 'text-neon-green'
+            }`}
           key={tiempoRestante}
         >
           <Clock className="w-4 h-4" /> {tiempoRestante}s
@@ -250,14 +276,13 @@ export default function RondaOnline() {
                   key={idx}
                   type="text"
                   value={p}
-                  onChange={(e) => actualizarPalabra(idx, e.target.value.replace(/\s/g, ''))}
+                  onChange={(e) => actualizarPalabra(idx, e.target.value)}
                   placeholder={`${idx + 1}`}
-                  maxLength={30}
-                  className={`bg-slate-900/60 border rounded-lg px-3 py-2.5 text-sm font-bold outline-none transition-colors ${
-                    duplicada
+                  maxLength={22}
+                  className={`bg-slate-900/60 border rounded-lg px-3 py-2.5 text-sm font-bold outline-none transition-colors ${duplicada
                       ? 'border-neon-red text-neon-red focus:border-neon-red shadow-[0_0_8px_rgba(255,90,121,0.15)] font-black'
                       : 'border-slate-805/85 focus:border-neon-purple text-white'
-                  }`}
+                    }`}
                 />
               );
             })}
@@ -280,15 +305,12 @@ export default function RondaOnline() {
         </div>
       )}
 
-      {soyHost && (
-        <button
-          type="button"
-          disabled={!todosEnviaronPalabras && tiempoRestante > 0}
-          className="btn-touch w-full mt-6 py-3.5 px-6 bg-slate-900/60 hover:bg-slate-900/90 disabled:opacity-30 disabled:pointer-events-none text-text-sub hover:text-white font-bold rounded-xl border border-slate-805/85 tracking-widest text-[11px] uppercase cursor-pointer"
-          onClick={arrancarRevelacion}
-        >
-          Revelar Resultados de la Ronda
-        </button>
+      {(todosEnviaronPalabras || tiempoRestante === 0) && (
+        <div className="mt-4 p-3 bg-neon-purple/20 border border-neon-purple/40 rounded-xl text-center animate-pulse">
+          <p className="text-neon-purple text-xs font-black uppercase tracking-widest">
+            ¡Iniciando Revelación!
+          </p>
+        </div>
       )}
     </div>
   );

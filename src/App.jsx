@@ -18,7 +18,9 @@ import PodiumOnline from './screens/online/PodiumOnline';
 
 function App() {
   const { vistaActual, navegarA, temaActual, modalSalirOpen, setModalSalirOpen } = useGame();
-  const { setCodigoSala } = useOnlineGame();
+  const { setCodigoSala, codigoSala, sala, jugadorId, salir } = useOnlineGame();
+
+  const esJugadorDeSala = Boolean(sala && jugadorId && sala.jugadores?.[jugadorId]);
 
   useEffect(() => {
     const root = document.documentElement;
@@ -47,6 +49,21 @@ function App() {
       navegarA('online-unirse');
     }
   }, [navegarA, setCodigoSala]);
+
+  // Redirección automática global según el estado de la sala online activa (SOLO para jugadores oficialmente unidos)
+  useEffect(() => {
+    if (esJugadorDeSala && codigoSala) {
+      if (sala.estado === 'lobby' && vistaActual !== 'online-lobby' && (vistaActual === 'home' || vistaActual.startsWith('online-'))) {
+        navegarA('online-lobby');
+      } else if (sala.estado === 'jugando' && vistaActual !== 'online-ronda') {
+        navegarA('online-ronda');
+      } else if (sala.estado === 'revelando' && vistaActual !== 'online-revelacion') {
+        navegarA('online-revelacion');
+      } else if (sala.estado === 'finalizada' && vistaActual !== 'online-podium') {
+        navegarA('online-podium');
+      }
+    }
+  }, [esJugadorDeSala, sala, codigoSala, vistaActual, navegarA]);
 
   const renderVista = () => {
     switch (vistaActual) {
@@ -104,9 +121,12 @@ function App() {
               </button>
               <button 
                 type="button"
-                onClick={() => {
+                onClick={async () => {
                   setModalSalirOpen(false);
                   const esOnline = vistaActual.startsWith('online-');
+                  if (esOnline) {
+                    await salir();
+                  }
                   navegarA(esOnline ? 'online-home' : 'home');
                 }}
                 className="btn-touch flex-1 py-3.5 bg-neon-red hover:bg-red-500 text-white font-extrabold rounded-xl text-[10px] uppercase tracking-widest"
@@ -117,6 +137,11 @@ function App() {
           </div>
         </div>
       )}
+
+      {/* Indicador de versión y hora para control de testeos */}
+      <div className="fixed bottom-1.5 right-2 text-[10px] text-white/30 font-mono pointer-events-none z-50 select-none">
+        v. 280726 2141
+      </div>
     </div>
   );
 }

@@ -1,19 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import { useGame } from '../context/GameContext';
+import { useOnlineGame } from '../context/OnlineGameContext';
 import { getHistory } from '../services/categories';
-import { 
-  Target, 
-  Gamepad2, 
-  Globe, 
-  History, 
-  Volume2, 
-  VolumeX, 
-  Mic, 
-  MicOff, 
-  Crown, 
-  Calendar, 
-  Trophy, 
-  X, 
+import {
+  Target,
+  Gamepad2,
+  Globe,
+  History,
+  Volume2,
+  VolumeX,
+  Mic,
+  MicOff,
+  Crown,
+  Calendar,
+  Trophy,
+  X,
   ArrowRight,
   Info,
   Palette,
@@ -22,15 +23,21 @@ import {
 import SpeakingHeadIcon from '../components/SpeakingHeadIcon';
 
 export default function Home() {
-  const { 
-    navegarA, 
-    muteSonidos, 
-    muteVoz, 
-    toggleMuteSonidos, 
+  const {
+    navegarA,
+    muteSonidos,
+    muteVoz,
+    toggleMuteSonidos,
     toggleMuteVoz,
     temaActual,
     setTemaActual
   } = useGame();
+
+  const {
+    propuestaReconexion,
+    confirmarReconexion,
+    descartarReconexion
+  } = useOnlineGame();
 
   const [historial, setHistorial] = useState([]);
   const [modalAyudaOpen, setModalAyudaOpen] = useState(false);
@@ -62,7 +69,7 @@ export default function Home() {
 
   return (
     <div className="flex-1 w-full max-w-md mx-auto flex flex-col justify-between py-6 px-4 relative">
-      
+
       {/* 🔇 Controles rápidos flotantes de Sonido y Paleta Global */}
       <div className="absolute top-2 right-2 flex items-center gap-2 z-20">
         {/* Panel Selector de Temas Horizontal */}
@@ -72,11 +79,10 @@ export default function Home() {
               <button
                 key={t.id}
                 type="button"
-                className={`w-5 h-5 rounded-full ${t.color} cursor-pointer transition-all hover:scale-110 active:scale-95 ${
-                  temaActual === t.id 
-                    ? 'ring-2 ring-white scale-105 shadow-[0_0_10px_rgba(255,255,255,0.7)]' 
+                className={`w-5 h-5 rounded-full ${t.color} cursor-pointer transition-all hover:scale-110 active:scale-95 ${temaActual === t.id
+                    ? 'ring-2 ring-white scale-105 shadow-[0_0_10px_rgba(255,255,255,0.7)]'
                     : 'opacity-65 hover:opacity-100'
-                }`}
+                  }`}
                 onClick={() => setTemaActual(t.id)}
                 title={t.nombre}
               />
@@ -86,9 +92,8 @@ export default function Home() {
 
         <button
           type="button"
-          className={`btn-touch w-10 h-10 rounded-xl bg-slate-900/80 border border-slate-800 flex items-center justify-center cursor-pointer transition-colors shadow-md ${
-            menuTemasOpen ? 'border-neon-purple text-neon-purple shadow-neon-purple/10' : 'text-text-sub hover:text-white hover:border-slate-700'
-          }`}
+          className={`btn-touch w-10 h-10 rounded-xl bg-slate-900/80 border border-slate-800 flex items-center justify-center cursor-pointer transition-colors shadow-md ${menuTemasOpen ? 'border-neon-purple text-neon-purple shadow-neon-purple/10' : 'text-text-sub hover:text-white hover:border-slate-700'
+            }`}
           onClick={() => setMenuTemasOpen(prev => !prev)}
           title="Seleccionar paleta de colores"
         >
@@ -133,20 +138,20 @@ export default function Home() {
         <button
           type="button"
           className="btn-touch w-full py-5 px-6 bg-neon-purple hover:bg-violet-750 text-white font-extrabold rounded-2xl shadow-xl shadow-neon-purple/20 border-b-4 border-violet-900 tracking-widest text-sm uppercase flex items-center justify-center gap-2.5"
-          onClick={() => navegarA('setup')}
+          onClick={() => navegarA('online-home')}
         >
-          <Gamepad2 className="w-5 h-5" /> En la Mesa
+          <Globe className="w-5 h-5" /> Jugar Online
         </button>
 
         <div className="grid grid-cols-2 gap-3">
           <button
             type="button"
             className="btn-touch py-3.5 px-4 bg-slate-900/60 hover:bg-slate-900/90 text-text-sub hover:text-white font-bold rounded-2xl border border-slate-805/85 tracking-widest text-[10px] uppercase flex items-center justify-center gap-1.5 transition-all cursor-pointer"
-            onClick={() => navegarA('online-home')}
+            onClick={() => navegarA('setup')}
           >
-            <Globe className="w-3.5 h-3.5" /> Modo Online
+            <Gamepad2 className="w-3.5 h-3.5" /> En la Mesa
           </button>
-          
+
           <button
             type="button"
             className="btn-touch py-3.5 px-4 bg-slate-900/60 hover:bg-slate-900/90 text-text-sub hover:text-white font-bold rounded-2xl border border-slate-805/85 tracking-widest text-[10px] uppercase flex items-center justify-center gap-1.5 transition-all cursor-pointer"
@@ -227,11 +232,10 @@ export default function Home() {
                 return (
                   <div
                     key={idx}
-                    className={`flex items-center justify-between p-3 rounded-xl border transition-colors ${
-                      esGanador
+                    className={`flex items-center justify-between p-3 rounded-xl border transition-colors ${esGanador
                         ? 'bg-neon-green/10 border-neon-green text-neon-green'
                         : 'bg-slate-900/60 border-slate-805/80 text-white'
-                    }`}
+                      }`}
                   >
                     <div className="flex items-center gap-2">
                       <span className="text-xs font-black w-4">
@@ -276,9 +280,9 @@ export default function Home() {
             <h3 className="text-sm font-black tracking-widest uppercase text-center text-white mb-2 flex items-center justify-center gap-1.5 font-display">
               <HelpCircle className="w-4 h-4 text-neon-green" /> ¿Cómo Jugar?
             </h3>
-            
+
             <p className="text-text-sub text-[10.5px] leading-relaxed text-center font-bold italic mb-3 px-1">
-              "Poner a prueba la conexión mental con los demás escribiendo las palabras que todos piensen."
+              "Pone a prueba tu conexión con los demás escribiendo las palabras que todos piensen."
             </p>
 
             <div className="border-t border-slate-900 pt-3 flex flex-col gap-2">
@@ -331,6 +335,39 @@ export default function Home() {
             >
               ¡Entendido!
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* 🔄 Modal Propuesta de Reconexión a Sala Activa */}
+      {propuestaReconexion && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/85 backdrop-blur-sm p-4 animate-scale-up">
+          <div className="bg-space-dark border-2 border-neon-purple rounded-2xl max-w-xs w-full p-6 shadow-2xl text-center">
+            <div className="mx-auto mb-3 w-12 h-12 rounded-2xl bg-neon-purple/20 border border-neon-purple/40 flex items-center justify-center">
+              <Globe className="w-6 h-6 text-neon-purple animate-pulse" />
+            </div>
+            <h3 className="text-sm font-black tracking-widest uppercase text-white mb-2 font-display">
+              Partida en Curso
+            </h3>
+            <p className="text-text-sub text-xs mb-6 font-bold leading-relaxed">
+              Detectamos que tenés una partida activa en la sala <span className="text-neon-purple font-black">{propuestaReconexion.codigo}</span>. ¿Querés reincorporarte?
+            </p>
+            <div className="flex flex-col gap-2.5">
+              <button
+                type="button"
+                onClick={confirmarReconexion}
+                className="btn-touch w-full py-3.5 bg-neon-purple hover:bg-violet-750 text-white font-extrabold rounded-xl text-xs uppercase tracking-widest border-b-4 border-violet-900 cursor-pointer"
+              >
+                Sí, Reincorporarme
+              </button>
+              <button
+                type="button"
+                onClick={descartarReconexion}
+                className="btn-touch w-full py-3 bg-slate-900 hover:bg-slate-950 text-text-sub hover:text-white font-bold rounded-xl text-xs uppercase tracking-widest border border-slate-800 cursor-pointer"
+              >
+                No, Descartar
+              </button>
+            </div>
           </div>
         </div>
       )}

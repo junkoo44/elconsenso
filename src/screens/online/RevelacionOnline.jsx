@@ -42,8 +42,8 @@ export default function RevelacionOnline() {
     ? palabrasRaw
     : palabrasRaw
       ? Object.keys(palabrasRaw)
-          .sort((a, b) => parseInt(a) - parseInt(b))
-          .map((key) => palabrasRaw[key])
+        .sort((a, b) => parseInt(a) - parseInt(b))
+        .map((key) => palabrasRaw[key])
       : [];
 
   const indexRevelado = sala?.palabraReveladaIndex ?? 1;
@@ -56,11 +56,11 @@ export default function RevelacionOnline() {
       ? palsRaw
       : palsRaw
         ? Object.keys(palsRaw)
-            .sort((a, b) => parseInt(a) - parseInt(b))
-            .map((key) => palsRaw[key])
+          .sort((a, b) => parseInt(a) - parseInt(b))
+          .map((key) => palsRaw[key])
         : [];
     pals.forEach((p) => {
-      if (p) palabrasLeidasAnteriores.add(p.trim().toLowerCase());
+      if (p) palabrasLeidasAnteriores.add(normalizarPalabra(p));
     });
   });
 
@@ -70,7 +70,7 @@ export default function RevelacionOnline() {
   const indicesPreLeidos = palabras
     .map((p, idx) => {
       const coincide = coincidencias.some(c => normalizarPalabra(c.palabra) === normalizarPalabra(p));
-      const yaLeida = coincide && palabrasLeidasAnteriores.has(p.toLowerCase());
+      const yaLeida = coincide && palabrasLeidasAnteriores.has(normalizarPalabra(p));
       return yaLeida ? idx : -1;
     })
     .filter(idx => idx !== -1);
@@ -165,7 +165,7 @@ export default function RevelacionOnline() {
 
     const idx = sala?.palabraReveladaIndex ?? 1;
     const currentPalabras = palabrasRef.current;
-    
+
     if (idx <= currentPalabras.length) {
       const palabraActual = currentPalabras[idx - 1];
       let delay = 2500 / velocidad; // 2.5 segundos normal para leer palabras nuevas
@@ -173,12 +173,12 @@ export default function RevelacionOnline() {
       if (palabraActual) {
         const currentCoincidencias = coincidenciasRef.current;
         const currentLeidas = palabrasLeidasAnterioresRef.current;
-        
+
         const coincide = currentCoincidencias.some(
           (c) => normalizarPalabra(c.palabra) === normalizarPalabra(palabraActual)
         );
-        const yaLeidaAnteriormente = coincide && currentLeidas.has(palabraActual.toLowerCase());
-        
+        const yaLeidaAnteriormente = coincide && currentLeidas.has(normalizarPalabra(palabraActual));
+
         // 5: Si es repetida, se saltea sin delay (50ms) para no generar silencios
         if (yaLeidaAnteriormente) {
           delay = 50;
@@ -189,29 +189,39 @@ export default function RevelacionOnline() {
         siguientePalabraRevelacion();
       }, delay);
       return () => clearTimeout(timer);
+    } else {
+      // Todas las palabras de esta tarjeta fueron reveladas. Pausar 3.5s y avanzar automáticamente
+      const timer = setTimeout(() => {
+        if (turno === orden.length - 1 && sala.config?.rondas !== 'infinito' && sala.rondaActual >= sala.config?.rondas) {
+          cerrarRondaYAvanzar(todasCategorias);
+        } else {
+          siguienteTurnoRevelacion();
+        }
+      }, 3500 / velocidad);
+      return () => clearTimeout(timer);
     }
-  }, [turno, sala?.palabraReveladaIndex, revelarGradual, yaTerminoRevelacion, soyHost, jugadorIdActual, faseActual, siguientePalabraRevelacion]);
+  }, [turno, sala?.palabraReveladaIndex, revelarGradual, yaTerminoRevelacion, soyHost, jugadorIdActual, faseActual, siguientePalabraRevelacion, orden.length, sala?.config?.rondas, sala?.rondaActual, cerrarRondaYAvanzar, todasCategorias, siguienteTurnoRevelacion, velocidad]);
 
   // --- 3. Lectura por voz reactiva (Solo lee palabras nuevas y evita duplicados al inicio) ---
   useEffect(() => {
     if (!revelarGradual || yaTerminoRevelacion || !soyHost || !jugadorIdActual || faseActualRef.current !== 'lenta') return;
 
     const idx = sala?.palabraReveladaIndex ?? 1;
-    
+
     // Solo proceder si este índice no fue leído en este turno
     if (idx !== ultimaPalabraLeidaIndexRef.current) {
       ultimaPalabraLeidaIndexRef.current = idx;
-      
+
       const currentPalabras = palabrasRef.current;
       const palabraActual = currentPalabras[idx - 1];
       if (palabraActual) {
         const currentCoincidencias = coincidenciasRef.current;
         const currentLeidas = palabrasLeidasAnterioresRef.current;
-        
+
         const coincide = currentCoincidencias.some(
           (c) => normalizarPalabra(c.palabra) === normalizarPalabra(palabraActual)
         );
-        const yaLeidaAnteriormente = coincide && currentLeidas.has(palabraActual.toLowerCase());
+        const yaLeidaAnteriormente = coincide && currentLeidas.has(normalizarPalabra(palabraActual));
 
         // Solo leer en voz alta si es la primera vez que se destapa en la mesa
         if (!yaLeidaAnteriormente) {
@@ -276,7 +286,7 @@ export default function RevelacionOnline() {
 
   // --- Vista "de a uno" (velo gradual activo) ---
   if (revelarGradual && !yaTerminoRevelacion) {
-    
+
     // --- 1a: Pantalla de Introducción (Nombre de Jugador) ---
     if (faseActual === 'intro') {
       return (
@@ -311,7 +321,7 @@ export default function RevelacionOnline() {
 
           {/* Barra de Reacciones Emojis (Elevada para mobile) */}
           <div className="flex justify-center gap-6 py-3.5 bg-slate-950/30 border border-slate-900 rounded-2xl relative z-20 mb-10 pb-4">
-            {['😤', '🤣', '🤌🏻', '🧐'].map((emoji) => (
+            {['🤔', '🤣', '😖', '🥳', '🤯'].map((emoji) => (
               <button
                 key={emoji}
                 type="button"
@@ -343,7 +353,7 @@ export default function RevelacionOnline() {
       // pausaIntermedia o lenta
       puntosJugadorParcial = palabras.reduce((total, palabra, idx) => {
         const match = coincidencias.find(c => normalizarPalabra(c.palabra) === normalizarPalabra(palabra));
-        const esPreLeida = match && palabrasLeidasAnteriores.has(palabra.toLowerCase());
+        const esPreLeida = match && palabrasLeidasAnteriores.has(normalizarPalabra(palabra));
         const esRecorridaLenta = idx < indexRevelado;
         if (match && (esPreLeida || esRecorridaLenta)) {
           return total + match.puntos;
@@ -386,7 +396,7 @@ export default function RevelacionOnline() {
               const coincide = coincidencias.some(
                 (c) => normalizarPalabra(c.palabra) === normalizarPalabra(palabra)
               );
-              const yaLeidaAnteriormente = coincide && palabrasLeidasAnteriores.has(palabra.toLowerCase());
+              const yaLeidaAnteriormente = coincide && palabrasLeidasAnteriores.has(normalizarPalabra(palabra));
 
               let visible = false;
               if (faseActual === 'pausaInicial') {
@@ -403,8 +413,8 @@ export default function RevelacionOnline() {
               const matchDetalle = coincidencias.find(
                 (c) => normalizarPalabra(c.palabra) === normalizarPalabra(palabra)
               );
-              const idsCoincidentes = matchDetalle 
-                ? matchDetalle.jugadoresIds.filter(id => id !== jugadorIdActual) 
+              const idsCoincidentes = matchDetalle
+                ? matchDetalle.jugadoresIds.filter(id => id !== jugadorIdActual)
                 : [];
               const nombresCoincidentes = idsCoincidentes.map(id => nombreDe(id));
 
@@ -422,11 +432,10 @@ export default function RevelacionOnline() {
               return (
                 <div
                   key={idx}
-                  className={`px-3 py-2.5 rounded-lg text-sm font-bold text-center border transition-all duration-300 relative overflow-visible ${
-                    coincide
+                  className={`px-3 py-2.5 rounded-lg text-sm font-bold text-center border transition-all duration-300 relative overflow-visible ${coincide
                       ? 'bg-neon-green/15 border-neon-green text-neon-green shadow-[0_0_8px_rgba(6,214,160,0.15)] font-black'
                       : 'bg-slate-900/50 border-slate-805/85 text-text-sub'
-                  }`}
+                    }`}
                 >
                   <span>{palabra}</span>
 
@@ -479,15 +488,15 @@ export default function RevelacionOnline() {
                 </div>
               ) : indexRevelado <= palabras.length ? (
                 <div className="text-center py-3 text-[10px] font-extrabold uppercase tracking-widest text-neon-green animate-pulse">
-                  Revelando palabras automáticamente...
+                  Revelando palabras...
                 </div>
               ) : (
                 <button
                   type="button"
-                  className="btn-touch w-full py-4.5 px-6 bg-neon-purple hover:bg-violet-750 text-white font-extrabold rounded-2xl border-b-4 border-violet-900 tracking-widest text-sm uppercase flex items-center justify-center gap-2 cursor-pointer"
+                  className="btn-touch w-full py-4.5 px-6 bg-neon-purple hover:bg-violet-750 text-white font-extrabold rounded-2xl border-b-4 border-violet-900 tracking-widest text-sm uppercase flex items-center justify-center gap-2 cursor-pointer animate-pulse"
                   onClick={turno === orden.length - 1 && sala.config.rondas !== 'infinito' && sala.rondaActual >= sala.config.rondas ? continuarASiguienteRonda : avanzarJugador}
                 >
-                  <Sparkles className="w-4 h-4" /> {turno === orden.length - 1 ? (sala.config.rondas !== 'infinito' && sala.rondaActual >= sala.config.rondas ? 'Terminar Partida y Ver Podio' : 'Ver Resultados') : 'Siguiente Jugador'} <ArrowRight className="w-4 h-4" />
+                  <Sparkles className="w-4 h-4" /> {turno === orden.length - 1 ? (sala.config.rondas !== 'infinito' && sala.rondaActual >= sala.config.rondas ? 'Terminar Partida (Avanzando...)' : 'Ver Resultados (Avanzando...)') : 'Siguiente Jugador (Avanzando...)'} <ArrowRight className="w-4 h-4" />
                 </button>
               )}
             </div>
@@ -495,14 +504,16 @@ export default function RevelacionOnline() {
             <p className="text-text-sub text-[10px] font-bold uppercase tracking-widest text-center animate-pulse">
               {faseActual === 'pausaInicial' || faseActual === 'fast' || faseActual === 'pausaIntermedia'
                 ? 'Repasando aciertos anteriores...'
-                : 'Esperando al anfitrión...'}
+                : indexRevelado > palabras.length
+                  ? 'Avanzando automáticamente...'
+                  : 'Esperando al anfitrión...'}
             </p>
           )}
         </div>
 
         {/* Barra de Reacciones Emojis (Elevada para mobile) */}
         <div className="flex justify-center gap-6 py-3.5 bg-slate-950/30 border border-slate-900 rounded-2xl relative z-20 mb-10 pb-4">
-          {['😤', '🤣', '🤌🏻', '🧐'].map((emoji) => (
+          {['🤔', '🤣', '😖', '🥳', '🤯'].map((emoji) => (
             <button
               key={emoji}
               type="button"
@@ -587,7 +598,7 @@ export default function RevelacionOnline() {
 
         {/* Barra de Reacciones Emojis (Elevada para mobile) */}
         <div className="flex justify-center gap-6 py-3.5 bg-slate-950/30 border border-slate-900 rounded-2xl relative z-20 mb-10 pb-4">
-          {['😤', '🤣', '🤌🏻', '🧐'].map((emoji) => (
+          {['🤔', '🤣', '😖', '🥳', '🤯'].map((emoji) => (
             <button
               key={emoji}
               type="button"

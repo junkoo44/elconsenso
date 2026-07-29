@@ -2,11 +2,11 @@ import React, { useEffect, useRef } from 'react';
 import { useGame } from '../../context/GameContext';
 import { useOnlineGame } from '../../context/OnlineGameContext';
 import { useAudio } from '../../hooks/useAudio';
-import { Crown, Home, Trophy, Sparkles } from 'lucide-react';
+import { Crown, Home, Trophy, Sparkles, RotateCcw } from 'lucide-react';
 
 export default function PodiumOnline() {
   const { navegarA } = useGame();
-  const { sala, listaJugadores, salir, codigoSala } = useOnlineGame();
+  const { sala, listaJugadores, salir, codigoSala, soyHost, reiniciarPartida } = useOnlineGame();
   const { playFanfarria } = useAudio();
   const canvasRef = useRef(null);
 
@@ -171,9 +171,23 @@ export default function PodiumOnline() {
 
       {/* Botonera inferior */}
       <div className="flex flex-col gap-3 mt-6 relative z-10">
+        {soyHost ? (
+          <button
+            type="button"
+            className="btn-touch w-full py-4.5 bg-neon-green hover:bg-emerald-400 text-slate-950 font-black rounded-2xl shadow-xl shadow-neon-green/20 border-b-4 border-emerald-600 tracking-widest text-sm uppercase flex items-center justify-center gap-2 cursor-pointer animate-pulse"
+            onClick={reiniciarPartida}
+          >
+            <RotateCcw className="w-5 h-5" /> Volver a Jugar
+          </button>
+        ) : (
+          <div className="text-center py-2 text-xs font-bold text-neon-green animate-pulse uppercase tracking-wider">
+            ✨ Esperando a que el anfitrión vuelva a jugar...
+          </div>
+        )}
+
         <button
           type="button"
-          className="btn-touch w-full py-4.5 bg-neon-purple hover:bg-violet-750 text-white font-extrabold rounded-2xl shadow-xl shadow-neon-purple/20 border-b-4 border-violet-900 tracking-widest text-sm uppercase flex items-center justify-center gap-2 cursor-pointer"
+          className="btn-touch w-full py-4 bg-slate-900/80 hover:bg-slate-900 text-white/80 hover:text-white font-extrabold rounded-2xl border border-slate-800 tracking-widest text-xs uppercase flex items-center justify-center gap-2 cursor-pointer"
           onClick={volverAlInicio}
         >
           <Home className="w-4 h-4" /> Menú Principal

@@ -14,19 +14,27 @@ export default function SpeakingHeadIcon({ className = "w-4 h-4", muted = false 
       strokeLinejoin="round" 
       className={className}
     >
-      {/* Contorno del perfil de cabeza hablando mirando a la izquierda */}
-      <path d="M 18 3.5 C 12.5 3.5 9 7 9 11 L 7.2 12.8 C 6.9 13.1 7.1 13.6 7.6 13.6 H 9 L 8.2 15 C 7.9 15.4 8.2 16 8.7 16 H 10 C 11.5 18.2 13.8 19.5 16.8 19.5 C 20.2 19.5 21.5 16.5 21.5 11.5 C 21.5 6.5 19.8 3.5 18 3.5 Z" />
-      
+      {/* Cabeza con nariz definida y boca ampliamente abierta */}
+      <g transform="translate(0, 2)">
+        <path 
+          fill="currentColor" 
+          stroke="none"
+          d="M 0,0 L 8,0 C 9.5,2 10.2,4.5 11,6.5 C 11.8,7.2 13.5,8.2 13.5,9.5 C 13.5,10.5 12,11.2 10.5,11.8 L 5.5,13.5 L 10,16.2 C 11.2,16.8 11.8,17.8 10.8,18.8 C 9.8,19.8 7.5,19.8 5,19.8 L 0,19.8 Z" 
+        />
+      </g>
+
       {!muted ? (
-        <>
-          {/* Ondas sonoras saliendo de la boca hacia la izquierda */}
-          <path d="M 5.2 9.5 C 4.1 11 4.1 13 5.2 14.5" />
-          <path d="M 3.2 7.5 C 1.5 10 1.5 14 3.2 16.5" />
-          <path d="M 1.2 5.5 C -0.5 9 -0.5 15 1.2 18.5" />
-        </>
+        <g className="sound-waves">
+          {/* Onda 1 (Interna) */}
+          <path d="M 13.8,9 C 15.2,11 15.2,14 13.8,16" />
+          {/* Onda 2 (Media) */}
+          <path d="M 16.5,7 C 18.8,9.8 18.8,15.2 16.5,18" />
+          {/* Onda 3 (Externa) */}
+          <path d="M 19.2,5 C 22.5,8.5 22.5,16.5 19.2,20" />
+        </g>
       ) : (
         /* Barra roja o diagonal de silenciado */
-        <line x1="2" y1="2" x2="22" y2="22" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" />
+        <line x1="2" y1="22" x2="22" y2="2" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
       )}
     </svg>
   );

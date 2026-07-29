@@ -13,7 +13,7 @@ export const DEFAULT_CATEGORIES = [
       "Trucha", "Rana", "Sapo", "Lagarto", "Camaleón", "Tortuga", "Avestruz", "Flamenco", "Tucán",
       "Cóndor", "Halcón", "Búho", "Abeja", "Mariposa", "Hormiga", "Araña", "Escorpión", "Ciempiés",
       "Mosca", "Mosquito", "Escarabajo", "Libélula", "León", "Leopardo", "Guepardo", "Puma", "Lince",
-      "Nutria", "Foca", "Morsa", "Delfín rosado", "Ornitorrinco", "Armadillo", "Pangolín", "Tapir",
+      "Nutria", "Foca", "Morsa", "Delfín rosado", "Ornitorrinco", "Armadillo", "Tapir",
       "Llama", "Alpaca"
     ]
   },
@@ -29,7 +29,7 @@ export const DEFAULT_CATEGORIES = [
       "Etiopía", "Japón", "China", "Corea", "India", "Pakistan", "Bangladesh", "Vietnam", "Tailandia",
       "Indonesia", "Australia", "Nueva Zelanda", "Canadá", "Estados Unidos", "Panamá", "Costa Rica",
       "Guatemala", "Honduras", "El Salvador", "Nicaragua", "República Dominicana", "Haití", "Jamaica",
-      "Trinidad", "Irak", "Irán", "Arabia Saudita", "Israel", "Jordania", "Siria", "Líbano", "Afganistán",
+      "Trinidad", "Irak", "Irán", "Arabia Saudita", "Jordania", "Siria", "Líbano", "Afganistán",
       "Kazajistán", "Uzbekistán", "Ghana", "Senegal", "Tanzania", "Mozambique", "Angola"
     ]
   },
@@ -43,7 +43,7 @@ export const DEFAULT_CATEGORIES = [
       "Carbonada", "Puchero", "Pollo", "Churrasco", "Bife", "Costillas", "Chorizo", "Morcilla",
       "Salchicha", "Jamón", "Queso", "Huevo", "Papa", "Batata", "Mandioca", "Zapallo", "Choclo",
       "Tomate", "Lechuga", "Zanahoria", "Cebolla", "Ajo", "Sopa", "Guiso", "Estofado", "Curry",
-      "Hummus", "Falafel", "Kebab", "Ramen", "Pad thai", "Ceviche", "Dulce de leche", "Alfajor",
+      "Hummus", "Falafel", "Kebab", "Ramen", "Ceviche", "Dulce de leche", "Alfajor",
       "Medialunas", "Facturas", "Torta", "Helado", "Flan", "Panqueque", "Waffles", "Crepes",
       "Chocolate", "Caramelo", "Mermelada", "Mantequilla", "Yogur", "Kéfir", "Queso brie", "Mozzarella",
       "Ricota", "Provolone", "Pulpo", "Calamares", "Mejillones", "Langostinos"
@@ -57,10 +57,10 @@ export const DEFAULT_CATEGORIES = [
       "Fútbol", "Tenis", "Básquet", "Natación", "Atletismo", "Rugby", "Vóley", "Hockey", "Béisbol",
       "Golf", "Boxeo", "Lucha", "Judo", "Karate", "Taekwondo", "Esgrima", "Tiro", "Arquería",
       "Ciclismo", "Automovilismo", "Motociclismo", "Esquí", "Snowboard", "Patinaje", "Surf",
-      "Windsurf", "Kitesurf", "Remo", "Kayak", "Vela", "Polo", "Equitación", "Handball", "Waterpolo",
+      "Windsurf", "Remo", "Kayak", "Vela", "Polo", "Equitación", "Handball", "Waterpolo",
       "Triatlón", "Maratón", "Pentatlón", "Decatlón", "Salto alto", "Salto largo", "Lanzamiento",
-      "Jabalina", "Disco", "Martillo", "Pértiga", "Escalada", "Paracaidismo", "Parapente", "Alas delta",
-      "Buceo", "Crossfit", "Pilates", "Yoga", "Gimnasia", "Trampolín", "Halterofilia", "Powerlifting",
+      "Jabalina", "Martillo", "Pértiga", "Escalada", "Paracaidismo", "Parapente", "Alas delta",
+      "Buceo", "Crossfit", "Pilates", "Yoga", "Gimnasia", "Trampolín",
       "Culturismo", "Bádminton", "Padel", "Ping pong", "Billar", "Bolos", "Dardos",
       "Ajedrez", "Bridge", "Pesca deportiva", "Senderismo", "Bmx"
     ]
@@ -180,7 +180,7 @@ export const getCategories = () => {
       localStorage.setItem(STORAGE_KEYS.CATEGORIES, JSON.stringify(initialData));
       return initialData;
     }
-    
+
     return JSON.parse(stored);
   } catch (error) {
     console.error("Error leyendo categorías del localStorage:", error);

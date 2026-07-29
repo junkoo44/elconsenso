@@ -46,10 +46,15 @@ function obtenerOCrearJugadorId(codigoSala) {
   return id;
 }
 
-/** Normaliza una palabra para comparar coincidencias: minúsculas, sin tildes, sin espacios extra */
+/** Limpia una palabra según la regla: solo letras (a-z, áéíóúü, ñ), sin espacios ni símbolos, máximo 22 caracteres */
+export function limpiarPalabraInput(palabra) {
+  if (!palabra) return '';
+  return palabra.replace(/[^a-zA-ZáéíóúüÁÉÍÓÚÜñÑ]/g, '').slice(0, 22);
+}
+
+/** Normaliza una palabra para comparar coincidencias: minúsculas, sin tildes, sin símbolos, máximo 22 letras */
 export function normalizarPalabra(palabra) {
-  return palabra
-    .trim()
+  return limpiarPalabraInput(palabra)
     .toLowerCase()
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, ''); // remueve diacríticos (tildes, diéresis)
@@ -111,9 +116,10 @@ export async function crearSala(nombreHost, configInicial) {
  * Se une a una sala existente. Lanza error si no existe o si ya arrancó la partida.
  */
 /** Helper para evitar nombres duplicados, agregando números incrementales si el nombre ya existe */
-function generarNombreUnico(nombreDeseado, jugadoresExistentes = {}) {
-  const nombresOcupados = Object.values(jugadoresExistentes || {})
-    .map((j) => j.nombre.trim().toLowerCase());
+function generarNombreUnico(nombreDeseado, jugadoresExistentes = {}, miId = null) {
+  const nombresOcupados = Object.entries(jugadoresExistentes || {})
+    .filter(([id, _]) => id !== miId)
+    .map(([_, j]) => j.nombre.trim().toLowerCase());
 
   const nombreFinal = nombreDeseado.trim();
   const lowercaseFinal = nombreFinal.toLowerCase();
@@ -161,10 +167,8 @@ export async function unirseSala(codigoSala, nombreJugador) {
 
   let nombreDefinido = nombreJugador.trim();
 
-  // Solo forzar nombre único si el jugador es nuevo en la sala
-  if (!yaEstaEnSala) {
-    nombreDefinido = generarNombreUnico(nombreJugador, sala.jugadores);
-  }
+  // Siempre evitar nombres duplicados entre distintos jugadores de la sala
+  nombreDefinido = generarNombreUnico(nombreJugador, sala.jugadores, jugadorId);
 
   await update(ref(db, `salas/${codigoSala}/jugadores/${jugadorId}`), {
     nombre: nombreDefinido,
@@ -246,11 +250,16 @@ export async function enviarPalabras(codigoSala, jugadorId, palabras) {
     const norm = normalizarPalabra(p);
     if (!vistas.has(norm)) {
       vistas.add(norm);
-      unicas.push(p.trim());
+      const limpia = limpiarPalabraInput(p);
+      if (limpia) unicas.push(limpia);
     }
   });
 
-  await set(ref(db, `salas/${codigoSala}/palabrasEnviadas/${jugadorId}`), unicas);
+  // Si no escribió ninguna palabra, guardamos [""] para que Firebase conserve el registro
+  // y el sistema sepa que este jugador YA ENVIÓ sus respuestas de esta ronda.
+  const payload = unicas.length > 0 ? unicas : [""];
+
+  await set(ref(db, `salas/${codigoSala}/palabrasEnviadas/${jugadorId}`), payload);
 }
 
 /**
@@ -319,16 +328,37 @@ export function calcularCoincidencias(palabrasEnviadas, jugadoresIds = []) {
  * revelación. Calcula las coincidencias una sola vez y las guarda en la sala
  * para que todos los dispositivos vean exactamente lo mismo.
  */
-export async function iniciarRevelacion(codigoSala, palabrasEnviadas, ordenRevelacion) {
-  const { puntosRonda, detalle } = calcularCoincidencias(palabrasEnviadas, ordenRevelacion);
-  await update(ref(db, `salas/${codigoSala}`), {
-    estado: 'revelando',
-    turnoRevelacion: 0,
-    palabraReveladaIndex: 1, // Comenzamos revelando la primera palabra
-    puntosRondaActual: puntosRonda,
-    detalleCoincidencias: detalle,
-    ordenRevelacion,
-  });
+export async function iniciarRevelacion(codigoSala) {
+  try {
+    const salaRef = ref(db, `salas/${codigoSala}`);
+    const snap = await get(salaRef);
+    if (!snap.exists()) return;
+    const sala = snap.val();
+
+    // Si ya está en revelando o finalizada, no hacer nada para evitar bucles
+    if (sala.estado === 'revelando' || sala.estado === 'finalizada') return;
+
+    const palabrasEnviadas = sala.palabrasEnviadas || {};
+
+    const ordenRevelacion = Object.keys(sala.jugadores || {});
+    // Mezclar orden de forma aleatoria (Fisher-Yates)
+    for (let i = ordenRevelacion.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [ordenRevelacion[i], ordenRevelacion[j]] = [ordenRevelacion[j], ordenRevelacion[i]];
+    }
+
+    const { puntosRonda, detalle } = calcularCoincidencias(palabrasEnviadas, ordenRevelacion);
+    await update(salaRef, {
+      estado: 'revelando',
+      turnoRevelacion: 0,
+      palabraReveladaIndex: 1, // Comenzamos revelando la primera palabra
+      puntosRondaActual: puntosRonda,
+      detalleCoincidencias: detalle,
+      ordenRevelacion,
+    });
+  } catch (err) {
+    console.error("Error al iniciar revelación:", err);
+  }
 }
 
 /** Avanza la palabra revelada en la pantalla de velo gradual */
@@ -445,5 +475,40 @@ export async function enviarReaccionOnline(codigoSala, jugadorId, emoji) {
   await update(ref(db, `salas/${codigoSala}/jugadores/${jugadorId}`), {
     reaccion: emoji,
     reaccionTime: serverTimestamp()
+  });
+}
+
+/** Reinicia una partida finalizada devolviendo la sala al estado de lobby para jugar revancha */
+export async function reiniciarPartidaOnline(codigoSala) {
+  const salaSnap = await get(ref(db, `salas/${codigoSala}`));
+  if (!salaSnap.exists()) return;
+  const sala = salaSnap.val();
+
+  const jugadoresReseteados = {};
+  if (sala.jugadores) {
+    Object.entries(sala.jugadores).forEach(([id, jug]) => {
+      jugadoresReseteados[id] = {
+        ...jug,
+        puntos: 0,
+        reaccion: null,
+        reaccionTime: null,
+      };
+    });
+  }
+
+  await update(ref(db, `salas/${codigoSala}`), {
+    estado: 'lobby',
+    rondaActual: 0,
+    categoriaActual: null,
+    palabraActual: '',
+    lector: null,
+    categoriasJugadas: null,
+    palabrasEnviadas: null,
+    turnoRevelacion: 0,
+    ordenRevelacion: null,
+    puntosRondaActual: null,
+    puntajes: null,
+    historialRondas: null,
+    jugadores: jugadoresReseteados,
   });
 }
